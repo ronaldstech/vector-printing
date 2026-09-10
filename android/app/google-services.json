@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "334818588878",
+    "project_id": "maufa-printing",
+    "storage_bucket": "maufa-printing.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:334818588878:android:91da931ea78bd5d549b89f",
+        "android_client_info": {
+          "package_name": "com.example.maufa_printing"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "334818588878-v6n45vbdpt51qq2ren2o4hm4stnvq2kg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAHFZcm9adDkjQmA3kyR39fRGNmj0bYkh0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "334818588878-v6n45vbdpt51qq2ren2o4hm4stnvq2kg.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
