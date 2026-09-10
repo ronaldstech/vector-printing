@@ -113,42 +113,44 @@ class _AppConfigurationScreenState extends State<AppConfigurationScreen> {
     final user = auth.currentUser;
     final recordProvider = Provider.of<RecordProvider>(context);
 
+    final colors = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: colors.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         titleSpacing: 16,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(color: const Color(0xFFE2E8F0), height: 1),
+          child: Container(color: colors.outlineVariant, height: 1),
         ),
         title: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFFE0F2FE),
+                color: colors.primaryContainer,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
+              child: Icon(
                 Iconsax.setting_2,
-                color: Color(0xFF0284C7),
+                color: colors.primary,
                 size: 20,
               ),
             ),
             const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Text(
                   'App Configuration',
                   style: TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 17,
                     letterSpacing: -0.3,
-                    color: Color(0xFF0F172A),
+                    color: colors.onSurface,
                   ),
                 ),
                 Text(
@@ -156,7 +158,7 @@ class _AppConfigurationScreenState extends State<AppConfigurationScreen> {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF64748B),
+                    color: colors.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -173,12 +175,12 @@ class _AppConfigurationScreenState extends State<AppConfigurationScreen> {
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: colors.surface,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: colors.outlineVariant),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                    color: Colors.black.withValues(alpha: 0.04),
                     blurRadius: 10,
                     offset: const Offset(0, 3),
                   ),
@@ -189,12 +191,12 @@ class _AppConfigurationScreenState extends State<AppConfigurationScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE0F2FE),
+                      color: colors.primaryContainer,
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Iconsax.security_user,
-                      color: Color(0xFF0284C7),
+                      color: colors.primary,
                       size: 28,
                     ),
                   ),
@@ -205,17 +207,17 @@ class _AppConfigurationScreenState extends State<AppConfigurationScreen> {
                       children: [
                         Text(
                           user?.email ?? 'Admin',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.w800,
                             fontSize: 15,
-                            color: Color(0xFF0F172A),
+                            color: colors.onSurface,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF0284C7),
+                            color: colors.primary,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Text(
@@ -237,23 +239,23 @@ class _AppConfigurationScreenState extends State<AppConfigurationScreen> {
             const SizedBox(height: 20),
 
             // Pricing, Costs & Stock Configuration Section
-            _buildSectionHeader('Pricing, Cost & Profit Settings', Iconsax.coin_1),
+            _buildSectionHeader(context, 'Pricing, Cost & Profit Settings', Iconsax.coin_1),
             const SizedBox(height: 4),
-            const Text(
+            Text(
               'Changes saved here apply globally across all synchronized staff devices.',
-              style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+              style: TextStyle(fontSize: 11.5, color: colors.onSurfaceVariant, fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 12),
 
             Container(
               padding: const EdgeInsets.all(18.0),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: colors.surface,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: colors.outlineVariant),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                    color: Colors.black.withValues(alpha: 0.04),
                     blurRadius: 10,
                     offset: const Offset(0, 3),
                   ),
@@ -264,6 +266,7 @@ class _AppConfigurationScreenState extends State<AppConfigurationScreen> {
                 children: [
                   // Papers stock
                   _buildConfigInputField(
+                    context: context,
                     controller: _papersStockController,
                     label: 'Current Total Paper Stock',
                     hint: 'e.g. 500 sheets',
@@ -280,6 +283,7 @@ class _AppConfigurationScreenState extends State<AppConfigurationScreen> {
 
                   // Selling price per paper
                   _buildConfigInputField(
+                    context: context,
                     controller: _pricePerPaperController,
                     label: 'Printing Price per Paper',
                     hint: 'e.g. 150',
@@ -297,6 +301,7 @@ class _AppConfigurationScreenState extends State<AppConfigurationScreen> {
 
                   // Buying price per paper
                   _buildConfigInputField(
+                    context: context,
                     controller: _buyingPriceController,
                     label: 'Buying Price per Paper (Cost)',
                     hint: 'e.g. 35',
@@ -314,6 +319,7 @@ class _AppConfigurationScreenState extends State<AppConfigurationScreen> {
 
                   // Ink price per paper
                   _buildConfigInputField(
+                    context: context,
                     controller: _inkPriceController,
                     label: 'Ink / Toner Price per Paper',
                     hint: 'e.g. 25',
@@ -331,6 +337,7 @@ class _AppConfigurationScreenState extends State<AppConfigurationScreen> {
 
                   // Service fee per paper
                   _buildConfigInputField(
+                    context: context,
                     controller: _serviceFeeController,
                     label: 'Service Fee per Paper (Overhead/Wear)',
                     hint: 'e.g. 10',
@@ -351,13 +358,13 @@ class _AppConfigurationScreenState extends State<AppConfigurationScreen> {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: _netProfitPerPaper >= 0
-                          ? const Color(0xFFECFDF5)
-                          : const Color(0xFFFEE2E2),
+                          ? Colors.green.withValues(alpha: 0.12)
+                          : Colors.red.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: _netProfitPerPaper >= 0
-                            ? const Color(0xFFA7F3D0)
-                            : const Color(0xFFFECACA),
+                            ? Colors.green.withValues(alpha: 0.3)
+                            : Colors.red.withValues(alpha: 0.3),
                       ),
                     ),
                     child: Column(
@@ -365,9 +372,9 @@ class _AppConfigurationScreenState extends State<AppConfigurationScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
+                            Text(
                               'Total Expenses per Sheet:',
-                              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFF334155)),
+                              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: colors.onSurface),
                             ),
                             Text(
                               NumberFormatter.formatCurrency(_totalExpensesPerPaper),
@@ -381,18 +388,18 @@ class _AppConfigurationScreenState extends State<AppConfigurationScreen> {
                             Expanded(
                               child: Text(
                                 'Paper: ${NumberFormatter.formatCurrency(_currentBuyingPrice)}  •  Ink: ${NumberFormatter.formatCurrency(_currentInkPrice)}  •  Service: ${NumberFormatter.formatCurrency(_currentServiceFee)}',
-                                style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                                style: TextStyle(fontSize: 10.5, color: colors.onSurfaceVariant, fontWeight: FontWeight.w500),
                               ),
                             ),
                           ],
                         ),
-                        const Divider(height: 16, color: Color(0xFFCBD5E1)),
+                        Divider(height: 16, color: colors.outlineVariant),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
+                            Text(
                               'Net Profit per Paper:',
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: colors.onSurface),
                             ),
                             Text(
                               NumberFormatter.formatCurrency(_netProfitPerPaper),
@@ -466,16 +473,16 @@ class _AppConfigurationScreenState extends State<AppConfigurationScreen> {
             const SizedBox(height: 24),
 
             // Cloud & Synchronization Tools
-            _buildSectionHeader('Cloud & Synchronization', Iconsax.cloud_connection),
+            _buildSectionHeader(context, 'Cloud & Synchronization', Iconsax.cloud_connection),
             const SizedBox(height: 10),
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: colors.surface,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: colors.outlineVariant),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF0F172A).withValues(alpha: 0.02),
+                    color: Colors.black.withValues(alpha: 0.03),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -488,16 +495,16 @@ class _AppConfigurationScreenState extends State<AppConfigurationScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFECFDF5),
+                        color: Colors.green.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(Iconsax.cloud_change, color: Color(0xFF059669), size: 20),
                     ),
-                    title: const Text('Pull Records from Cloud', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                    subtitle: const Text('Fetch latest sales & payouts from other devices', style: TextStyle(fontSize: 11.5)),
+                    title: Text('Pull Records from Cloud', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: colors.onSurface)),
+                    subtitle: Text('Fetch latest sales & payouts from other devices', style: TextStyle(fontSize: 11.5, color: colors.onSurfaceVariant)),
                     trailing: _isProcessing
                         ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Icon(Iconsax.arrow_right_3, size: 16, color: Color(0xFF94A3B8)),
+                        : Icon(Iconsax.arrow_right_3, size: 16, color: colors.onSurfaceVariant),
                     onTap: _isProcessing
                         ? null
                         : () async {
@@ -526,20 +533,20 @@ class _AppConfigurationScreenState extends State<AppConfigurationScreen> {
                             }
                           },
                   ),
-                  const Divider(height: 1, indent: 56, color: Color(0xFFF1F5F9)),
+                  Divider(height: 1, indent: 56, color: colors.outlineVariant),
                   ListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE0F2FE),
+                        color: colors.primaryContainer,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(Iconsax.cloud_add, color: Color(0xFF0284C7), size: 20),
+                      child: Icon(Iconsax.cloud_add, color: colors.primary, size: 20),
                     ),
-                    title: const Text('Push Unsynced Records', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                    subtitle: Text('${recordProvider.pendingSyncRecordsCount} pending local record(s) waiting', style: const TextStyle(fontSize: 11.5)),
-                    trailing: const Icon(Iconsax.arrow_right_3, size: 16, color: Color(0xFF94A3B8)),
+                    title: Text('Push Unsynced Records', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: colors.onSurface)),
+                    subtitle: Text('${recordProvider.pendingSyncRecordsCount} pending local record(s) waiting', style: TextStyle(fontSize: 11.5, color: colors.onSurfaceVariant)),
+                    trailing: Icon(Iconsax.arrow_right_3, size: 16, color: colors.onSurfaceVariant),
                     onTap: () async {
                       final messenger = ScaffoldMessenger.of(context);
                       messenger.showSnackBar(
@@ -562,13 +569,13 @@ class _AppConfigurationScreenState extends State<AppConfigurationScreen> {
             const SizedBox(height: 24),
 
             // System & Database Info
-            _buildSectionHeader('System & Storage Engine', Iconsax.cpu),
+            _buildSectionHeader(context, 'System & Storage Engine', Iconsax.cpu),
             const SizedBox(height: 10),
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: colors.surface,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: colors.outlineVariant),
               ),
               child: Column(
                 children: [
@@ -576,26 +583,26 @@ class _AppConfigurationScreenState extends State<AppConfigurationScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
+                        color: colors.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(Iconsax.folder_2, color: Color(0xFF475569), size: 20),
+                      child: Icon(Iconsax.folder_2, color: colors.onSurfaceVariant, size: 20),
                     ),
-                    title: const Text('Local SQLite Store', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                    subtitle: Text('${NumberFormatter.format(recordProvider.records.length)} print sales saved on device', style: const TextStyle(fontSize: 11.5)),
+                    title: Text('Local SQLite Store', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: colors.onSurface)),
+                    subtitle: Text('${NumberFormatter.format(recordProvider.records.length)} print sales saved on device', style: TextStyle(fontSize: 11.5, color: colors.onSurfaceVariant)),
                   ),
-                  const Divider(height: 1, indent: 56, color: Color(0xFFF1F5F9)),
+                  Divider(height: 1, indent: 56, color: colors.outlineVariant),
                   ListTile(
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
+                        color: Colors.green.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(Iconsax.shield_tick, color: Color(0xFF059669), size: 20),
                     ),
-                    title: const Text('Offline Database Version', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                    subtitle: const Text('SQLite v5 (with real-time cloud bidirectional schema)', style: TextStyle(fontSize: 11.5)),
+                    title: Text('Offline Database Version', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: colors.onSurface)),
+                    subtitle: Text('SQLite v5 (with real-time cloud bidirectional schema)', style: TextStyle(fontSize: 11.5, color: colors.onSurfaceVariant)),
                   ),
                 ],
               ),
@@ -606,17 +613,18 @@ class _AppConfigurationScreenState extends State<AppConfigurationScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title, IconData icon) {
+  Widget _buildSectionHeader(BuildContext context, String title, IconData icon) {
+    final colors = Theme.of(context).colorScheme;
     return Row(
       children: [
-        Icon(icon, size: 17, color: const Color(0xFF0284C7)),
+        Icon(icon, size: 17, color: colors.primary),
         const SizedBox(width: 8),
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w800,
-            color: Color(0xFF0F172A),
+            color: colors.onSurface,
             letterSpacing: -0.2,
           ),
         ),
@@ -625,6 +633,7 @@ class _AppConfigurationScreenState extends State<AppConfigurationScreen> {
   }
 
   Widget _buildConfigInputField({
+    required BuildContext context,
     required TextEditingController controller,
     required String label,
     required String hint,
@@ -635,39 +644,40 @@ class _AppConfigurationScreenState extends State<AppConfigurationScreen> {
     void Function(String)? onChanged,
     String? Function(String?)? validator,
   }) {
+    final colors = Theme.of(context).colorScheme;
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
       onChanged: onChanged,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 14.5,
         fontWeight: FontWeight.w700,
-        color: Color(0xFF0F172A),
+        color: colors.onSurface,
       ),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(fontSize: 13, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+        labelStyle: TextStyle(fontSize: 13, color: colors.onSurfaceVariant, fontWeight: FontWeight.w600),
         hintText: hint,
-        hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
-        prefixIcon: Icon(icon, size: 20, color: const Color(0xFF64748B)),
+        hintStyle: TextStyle(fontSize: 13, color: colors.onSurfaceVariant.withValues(alpha: 0.7)),
+        prefixIcon: Icon(icon, size: 20, color: colors.onSurfaceVariant),
         prefixText: prefixText,
-        prefixStyle: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+        prefixStyle: TextStyle(fontWeight: FontWeight.w700, color: colors.onSurface),
         suffixText: suffixText,
-        suffixStyle: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+        suffixStyle: TextStyle(fontSize: 12, color: colors.onSurfaceVariant, fontWeight: FontWeight.w600),
         filled: true,
-        fillColor: const Color(0xFFF8FAFC),
+        fillColor: colors.surfaceContainerHighest,
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+          borderSide: BorderSide(color: colors.outlineVariant),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+          borderSide: BorderSide(color: colors.outlineVariant),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFF0284C7), width: 1.5),
+          borderSide: BorderSide(color: colors.primary, width: 1.5),
         ),
       ),
       validator: validator,

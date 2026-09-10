@@ -171,42 +171,44 @@ class _POSScreenState extends State<POSScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: colors.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         titleSpacing: 16,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(color: const Color(0xFFE2E8F0), height: 1),
+          child: Container(color: colors.outlineVariant, height: 1),
         ),
         title: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFFE0F2FE),
+                color: colors.primaryContainer,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
+              child: Icon(
                 Iconsax.shop,
-                color: Color(0xFF0284C7),
+                color: colors.primary,
                 size: 20,
               ),
             ),
             const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Text(
                   'POS Terminal',
                   style: TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 17,
                     letterSpacing: -0.3,
-                    color: Color(0xFF0F172A),
+                    color: colors.onSurface,
                   ),
                 ),
                 Text(
@@ -214,7 +216,7 @@ class _POSScreenState extends State<POSScreen> {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF64748B),
+                    color: colors.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -225,13 +227,13 @@ class _POSScreenState extends State<POSScreen> {
           Container(
             margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
             decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
+              color: colors.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              border: Border.all(color: colors.outlineVariant),
             ),
             child: IconButton(
               tooltip: 'Reset Form',
-              icon: const Icon(Iconsax.refresh, size: 18, color: Color(0xFF475569)),
+              icon: Icon(Iconsax.refresh, size: 18, color: colors.onSurfaceVariant),
               constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
               padding: EdgeInsets.zero,
               onPressed: _clearForm,
@@ -248,36 +250,37 @@ class _POSScreenState extends State<POSScreen> {
             children: [
               // 1. Customer Name Card
               _buildSectionCard(
+                context: context,
                 title: 'Customer Details',
                 icon: Iconsax.user_edit,
                 child: TextFormField(
                   controller: _customerNameController,
                   textCapitalization: TextCapitalization.words,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF0F172A),
+                    color: colors.onSurface,
                   ),
                   decoration: InputDecoration(
                     labelText: 'Customer Name (Optional)',
-                    labelStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
+                    labelStyle: TextStyle(color: colors.onSurfaceVariant, fontSize: 13),
                     hintText: 'Walk-in Customer / John Banda',
-                    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
-                    prefixIcon: const Icon(Iconsax.user, size: 20, color: Color(0xFF64748B)),
+                    hintStyle: TextStyle(color: colors.onSurfaceVariant.withValues(alpha: 0.6), fontSize: 13),
+                    prefixIcon: Icon(Iconsax.user, size: 20, color: colors.onSurfaceVariant),
                     filled: true,
-                    fillColor: const Color(0xFFF8FAFC),
+                    fillColor: colors.surfaceContainerHighest,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                      borderSide: BorderSide(color: colors.outlineVariant),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                      borderSide: BorderSide(color: colors.outlineVariant),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Color(0xFF0284C7), width: 1.5),
+                      borderSide: BorderSide(color: colors.primary, width: 1.5),
                     ),
                   ),
                 ),
@@ -286,6 +289,7 @@ class _POSScreenState extends State<POSScreen> {
 
               // 2. Quantity Configuration (Copies & Pages)
               _buildSectionCard(
+                context: context,
                 title: 'Print Specification',
                 icon: Iconsax.document_copy,
                 child: Column(
@@ -298,16 +302,17 @@ class _POSScreenState extends State<POSScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'Copies',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFF334155),
+                                  color: colors.onSurface,
                                 ),
                               ),
                               const SizedBox(height: 6),
                               _buildCounterInput(
+                                context: context,
                                 controller: _copiesController,
                                 icon: Iconsax.copy,
                                 onDecrement: () => _incrementCopies(-1),
@@ -331,10 +336,10 @@ class _POSScreenState extends State<POSScreen> {
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                       decoration: BoxDecoration(
-                                        color: isMatch ? const Color(0xFF0284C7) : const Color(0xFFF1F5F9),
+                                        color: isMatch ? colors.primary : colors.surfaceContainerHighest,
                                         borderRadius: BorderRadius.circular(8),
                                         border: Border.all(
-                                          color: isMatch ? const Color(0xFF0284C7) : const Color(0xFFE2E8F0),
+                                          color: isMatch ? colors.primary : colors.outlineVariant,
                                         ),
                                       ),
                                       child: Text(
@@ -342,7 +347,7 @@ class _POSScreenState extends State<POSScreen> {
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w700,
-                                          color: isMatch ? Colors.white : const Color(0xFF475569),
+                                          color: isMatch ? Colors.white : colors.onSurfaceVariant,
                                         ),
                                       ),
                                     ),
@@ -359,16 +364,17 @@ class _POSScreenState extends State<POSScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'Pages',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFF334155),
+                                  color: colors.onSurface,
                                 ),
                               ),
                               const SizedBox(height: 6),
                               _buildCounterInput(
+                                context: context,
                                 controller: _pagesController,
                                 icon: Iconsax.book_1,
                                 onDecrement: () => _incrementPages(-1),
@@ -392,10 +398,10 @@ class _POSScreenState extends State<POSScreen> {
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                       decoration: BoxDecoration(
-                                        color: isMatch ? const Color(0xFF0284C7) : const Color(0xFFF1F5F9),
+                                        color: isMatch ? colors.primary : colors.surfaceContainerHighest,
                                         borderRadius: BorderRadius.circular(8),
                                         border: Border.all(
-                                          color: isMatch ? const Color(0xFF0284C7) : const Color(0xFFE2E8F0),
+                                          color: isMatch ? colors.primary : colors.outlineVariant,
                                         ),
                                       ),
                                       child: Text(
@@ -403,7 +409,7 @@ class _POSScreenState extends State<POSScreen> {
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w700,
-                                          color: isMatch ? Colors.white : const Color(0xFF475569),
+                                          color: isMatch ? Colors.white : colors.onSurfaceVariant,
                                         ),
                                       ),
                                     ),
@@ -425,33 +431,39 @@ class _POSScreenState extends State<POSScreen> {
                         return Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9),
+                            color: colors.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                            border: Border.all(color: colors.outlineVariant),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Row(
-                                children: const [
-                                  Icon(Iconsax.info_circle, size: 16, color: Color(0xFF0284C7)),
-                                  SizedBox(width: 6),
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Iconsax.info_circle, size: 16, color: colors.primary),
+                                  const SizedBox(width: 6),
                                   Text(
                                     'Rate Per Sheet:',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
-                                      color: Color(0xFF475569),
+                                      color: colors.onSurfaceVariant,
                                     ),
                                   ),
                                 ],
                               ),
-                              Text(
-                                '${NumberFormatter.formatCurrency(configuredPrice)}  •  ${NumberFormatter.format(totalSheets)} total sheet(s)',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF0F172A),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  '${NumberFormatter.formatCurrency(configuredPrice)}  •  ${NumberFormatter.format(totalSheets)} sheet(s)',
+                                  textAlign: TextAlign.end,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                    color: colors.onSurface,
+                                  ),
                                 ),
                               ),
                             ],
@@ -466,6 +478,7 @@ class _POSScreenState extends State<POSScreen> {
 
               // 3. Payment Mode Selection Cards
               _buildSectionCard(
+                context: context,
                 title: 'Payment Method',
                 icon: Iconsax.wallet_3,
                 child: Column(
@@ -494,16 +507,16 @@ class _POSScreenState extends State<POSScreen> {
                                 duration: const Duration(milliseconds: 180),
                                 padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 2),
                                 decoration: BoxDecoration(
-                                  color: isSelected ? const Color(0xFF0284C7) : const Color(0xFFF8FAFC),
+                                  color: isSelected ? colors.primary : colors.surfaceContainerHighest,
                                   borderRadius: BorderRadius.circular(14),
                                   border: Border.all(
-                                    color: isSelected ? const Color(0xFF0284C7) : const Color(0xFFE2E8F0),
+                                    color: isSelected ? colors.primary : colors.outlineVariant,
                                     width: isSelected ? 1.5 : 1,
                                   ),
                                   boxShadow: isSelected
                                       ? [
                                           BoxShadow(
-                                            color: const Color(0xFF0284C7).withValues(alpha: 0.3),
+                                            color: colors.primary.withValues(alpha: 0.3),
                                             blurRadius: 8,
                                             offset: const Offset(0, 3),
                                           ),
@@ -516,7 +529,7 @@ class _POSScreenState extends State<POSScreen> {
                                     Icon(
                                       modeIcon,
                                       size: 20,
-                                      color: isSelected ? Colors.white : const Color(0xFF475569),
+                                      color: isSelected ? Colors.white : colors.onSurfaceVariant,
                                     ),
                                     const SizedBox(height: 5),
                                     Text(
@@ -527,7 +540,7 @@ class _POSScreenState extends State<POSScreen> {
                                       style: TextStyle(
                                         fontSize: 10,
                                         fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                        color: isSelected ? Colors.white : const Color(0xFF334155),
+                                        color: isSelected ? Colors.white : colors.onSurface,
                                       ),
                                     ),
                                   ],
@@ -741,19 +754,21 @@ class _POSScreenState extends State<POSScreen> {
   }
 
   Widget _buildSectionCard({
+    required BuildContext context,
     required String title,
     required IconData icon,
     required Widget child,
   }) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: colors.outlineVariant),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -764,14 +779,14 @@ class _POSScreenState extends State<POSScreen> {
         children: [
           Row(
             children: [
-              Icon(icon, size: 18, color: const Color(0xFF0284C7)),
+              Icon(icon, size: 18, color: colors.primary),
               const SizedBox(width: 8),
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF0F172A),
+                  color: colors.onSurface,
                   letterSpacing: -0.2,
                 ),
               ),
@@ -785,22 +800,24 @@ class _POSScreenState extends State<POSScreen> {
   }
 
   Widget _buildCounterInput({
+    required BuildContext context,
     required TextEditingController controller,
     required IconData icon,
     required VoidCallback onDecrement,
     required VoidCallback onIncrement,
     required String? Function(String?) validator,
   }) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: colors.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: colors.outlineVariant),
       ),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.remove, size: 16, color: Color(0xFF475569)),
+            icon: Icon(Icons.remove, size: 16, color: colors.onSurfaceVariant),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 36),
             onPressed: onDecrement,
@@ -810,10 +827,10 @@ class _POSScreenState extends State<POSScreen> {
               controller: controller,
               keyboardType: TextInputType.number,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
-                color: Color(0xFF0F172A),
+                color: colors.onSurface,
               ),
               decoration: const InputDecoration(
                 isDense: true,
@@ -825,7 +842,7 @@ class _POSScreenState extends State<POSScreen> {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.add, size: 16, color: Color(0xFF475569)),
+            icon: Icon(Icons.add, size: 16, color: colors.onSurfaceVariant),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 36),
             onPressed: onIncrement,

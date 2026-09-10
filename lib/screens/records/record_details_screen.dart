@@ -48,10 +48,12 @@ class RecordDetailsScreen extends StatelessWidget {
                                 ),
                           ),
                         ),
-                        Container(
+                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: record.isSynced ? Colors.green.shade100 : Colors.orange.shade100,
+                            color: record.isSynced
+                                ? Colors.green.withValues(alpha: 0.12)
+                                : Colors.orange.withValues(alpha: 0.14),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
@@ -60,7 +62,7 @@ class RecordDetailsScreen extends StatelessWidget {
                               Icon(
                                 record.isSynced ? Icons.cloud_done : Icons.cloud_upload,
                                 size: 14,
-                                color: record.isSynced ? Colors.green.shade800 : Colors.orange.shade800,
+                                color: record.isSynced ? Colors.green.shade700 : Colors.orange.shade700,
                               ),
                               const SizedBox(width: 4),
                               Text(
@@ -68,7 +70,7 @@ class RecordDetailsScreen extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
-                                  color: record.isSynced ? Colors.green.shade800 : Colors.orange.shade800,
+                                  color: record.isSynced ? Colors.green.shade700 : Colors.orange.shade700,
                                 ),
                               ),
                             ],
@@ -79,7 +81,7 @@ class RecordDetailsScreen extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       DateFormat('EEE, dd MMM yyyy • hh:mm a').format(record.timestamp),
-                      style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
                     ),
                     const Divider(height: 28),
                     _buildDetailRow('Job Description', record.jobDescription),
@@ -127,21 +129,23 @@ class RecordDetailsScreen extends StatelessWidget {
     Color? color,
     double fontSize = 15,
   }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 14)),
-          Text(
-            value,
-            style: TextStyle(
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-              color: color,
-              fontSize: fontSize,
+    return Builder(
+      builder: (context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14)),
+            Text(
+              value,
+              style: TextStyle(
+                fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+                color: color,
+                fontSize: fontSize,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

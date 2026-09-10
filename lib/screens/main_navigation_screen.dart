@@ -41,7 +41,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       extendBody: true,
       body: IndexedStack(
         index: _currentIndex,
@@ -53,10 +53,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.95),
+              color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.95),
               borderRadius: BorderRadius.circular(28),
               border: Border.all(
-                color: const Color(0xFFE2E8F0),
+                color: Theme.of(context).colorScheme.outlineVariant,
                 width: 1,
               ),
               boxShadow: [
@@ -172,7 +172,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                       child: Icon(
                         isSelected ? activeIcon : icon,
                         size: 23,
-                        color: isSelected ? Colors.white : const Color(0xFF334155),
+                        color: isSelected
+                            ? Colors.white
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                     if (badgeCount > 0)
@@ -186,7 +188,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                               colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
                             ),
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.white, width: 1.5),
+                          border: Border.all(color: Theme.of(context).colorScheme.surface, width: 1.5),
                             boxShadow: [
                               BoxShadow(
                                 color: const Color(0xFFDC2626).withValues(alpha: 0.4),
@@ -224,7 +226,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                     fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
                     color: isSelected
                         ? const Color(0xFF0284C7)
-                        : const Color(0xFF334155),
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
                     letterSpacing: -0.1,
                   ),
                 ),

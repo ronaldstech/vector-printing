@@ -129,7 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final auth = Provider.of<AuthService>(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC), // Clean off-white canvas
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Stack(
         children: [
           // Subtle soft atmospheric gradient background blob
@@ -179,11 +179,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 constraints: const BoxConstraints(maxWidth: 420),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(28),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF0F172A).withValues(alpha: 0.07),
+                        color: Colors.black.withValues(alpha: 0.07),
                         blurRadius: 36,
                         spreadRadius: 2,
                         offset: const Offset(0, 14),
@@ -195,7 +195,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                     border: Border.all(
-                      color: const Color(0xFFF1F5F9),
+                      color: Theme.of(context).colorScheme.outlineVariant,
                       width: 1.5,
                     ),
                   ),
@@ -215,20 +215,22 @@ class _LoginScreenState extends State<LoginScreen> {
                             height: 90,
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFFF8FAFC), Color(0xFFEDF2F7)],
+                              gradient: LinearGradient(
+                                colors: [
+                                  Theme.of(context).colorScheme.surfaceContainerHighest,
+                                  Theme.of(context).colorScheme.surfaceContainer,
+                                ],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                               ),
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: const Color(0xFFE2E8F0),
+                                color: Theme.of(context).colorScheme.outlineVariant,
                                 width: 1.5,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFF0F172A)
-                                      .withValues(alpha: 0.06),
+                                  color: Colors.black.withValues(alpha: 0.06),
                                   blurRadius: 16,
                                   offset: const Offset(0, 6),
                                 ),
@@ -242,13 +244,13 @@ class _LoginScreenState extends State<LoginScreen> {
                           const SizedBox(height: 18),
 
                           // Brand Heading
-                          const Text(
+                          Text(
                             'Vector Printing',
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.w800,
                               letterSpacing: -0.5,
-                              color: Color(0xFF0F172A),
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           const SizedBox(height: 6),
@@ -256,7 +258,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             'Sign in to manage print orders & sync records',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: Colors.grey.shade500,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                               fontSize: 13,
                               fontWeight: FontWeight.w400,
                             ),
@@ -272,16 +274,16 @@ class _LoginScreenState extends State<LoginScreen> {
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.grey.shade800,
+                                  color: Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                               const SizedBox(height: 8),
                               TextFormField(
                                 controller: _emailController,
                                 keyboardType: TextInputType.emailAddress,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 14,
-                                  color: Color(0xFF0F172A),
+                                  color: Theme.of(context).colorScheme.onSurface,
                                 ),
                                 decoration: InputDecoration(
                                   hintText: 'user1@gmail.com',
@@ -350,16 +352,16 @@ class _LoginScreenState extends State<LoginScreen> {
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.grey.shade800,
+                                  color: Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                               const SizedBox(height: 8),
                               TextFormField(
                                 controller: _passwordController,
                                 obscureText: _obscurePassword,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 14,
-                                  color: Color(0xFF0F172A),
+                                  color: Theme.of(context).colorScheme.onSurface,
                                 ),
                                 decoration: InputDecoration(
                                   hintText: '••••••••',

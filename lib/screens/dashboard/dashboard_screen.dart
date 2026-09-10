@@ -11,6 +11,8 @@ import '../../services/auth_service.dart';
 import '../../services/sync_service.dart';
 import '../auth/login_screen.dart';
 import '../settings/app_configuration_screen.dart';
+import '../settings/settings_screen.dart';
+import '../../providers/theme_provider.dart';
 
 class DashboardScreen extends StatelessWidget {
   final VoidCallback onNavigateToPOS;
@@ -28,24 +30,24 @@ class DashboardScreen extends StatelessWidget {
     final user = auth.currentUser;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         titleSpacing: 16,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(color: const Color(0xFFE2E8F0), height: 1),
+          child: Container(color: Theme.of(context).colorScheme.outlineVariant, height: 1),
         ),
         title: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(6),
@@ -61,13 +63,13 @@ class DashboardScreen extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Vector Printing',
                   style: TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 17,
                     letterSpacing: -0.3,
-                    color: Color(0xFF0F172A),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 Text(
@@ -90,9 +92,10 @@ class DashboardScreen extends StatelessWidget {
             offset: const Offset(0, 52),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
-              side: const BorderSide(color: Color(0xFFE2E8F0)),
+              side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
             ),
             elevation: 12,
+            color: Theme.of(context).colorScheme.surface,
             shadowColor: const Color(0xFF0F172A).withValues(alpha: 0.12),
             icon: Container(
               padding: const EdgeInsets.all(2),
@@ -234,51 +237,34 @@ class DashboardScreen extends StatelessWidget {
                 ),
               ),
 
+              const PopupMenuDivider(height: 1),
+              PopupMenuItem(
+                value: 'settings',
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: _menuRow(context, Iconsax.setting_2, 'Settings', 'Appearance and preferences'),
+              ),
+              PopupMenuItem(
+                value: 'theme',
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: _menuRow(
+                  context,
+                  Theme.of(context).brightness == Brightness.dark ? Iconsax.sun_1 : Iconsax.moon,
+                  'Change theme',
+                  Theme.of(context).brightness == Brightness.dark ? 'Switch to light mode' : 'Switch to dark mode',
+                ),
+              ),
+
               if (user?.isAdmin == true) ...[
                 const PopupMenuDivider(height: 1),
                 // Configure App
                 PopupMenuItem(
                   value: 'configure',
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(7),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          Iconsax.setting_2,
-                          size: 16,
-                          color: Color(0xFF475569),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
-                            Text(
-                              'App Configuration',
-                              style: TextStyle(
-                                color: Color(0xFF1E293B),
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                            Text(
-                              'Pricing, paper & user rules',
-                              style: TextStyle(
-                                color: Color(0xFF94A3B8),
-                                fontSize: 10,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                  child: _menuRow(
+                    context,
+                    Iconsax.setting_2,
+                    'App Configuration',
+                    'Pricing, paper & user rules',
                   ),
                 ),
               ],
@@ -341,6 +327,11 @@ class DashboardScreen extends StatelessWidget {
                     ),
                   );
                 }
+              } else if (val == 'settings') {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
+              } else if (val == 'theme') {
+                final theme = context.read<ThemeProvider>();
+                theme.setThemeMode(Theme.of(context).brightness == Brightness.dark ? ThemeMode.light : ThemeMode.dark);
               } else if (val == 'configure') {
                 Navigator.push(
                   context,
@@ -399,7 +390,31 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
+  Widget _menuRow(BuildContext context, IconData icon, String title, String subtitle) {
+    final colors = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(7),
+          decoration: BoxDecoration(color: colors.primaryContainer, borderRadius: BorderRadius.circular(10)),
+          child: Icon(icon, size: 16, color: colors.primary),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: TextStyle(color: colors.onSurface, fontWeight: FontWeight.w600, fontSize: 13)),
+              Text(subtitle, style: TextStyle(color: colors.onSurfaceVariant, fontSize: 10, fontWeight: FontWeight.w500)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildWelcomeHeader(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -407,20 +422,20 @@ class DashboardScreen extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Dashboard Overview',
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
-                color: Color(0xFF0F172A),
+                color: colors.onSurface,
                 letterSpacing: -0.5,
               ),
             ),
             const SizedBox(height: 3),
             Text(
               DateFormat('EEEE, d MMMM yyyy').format(DateTime.now()),
-              style: const TextStyle(
-                color: Color(0xFF64748B),
+              style: TextStyle(
+                color: colors.onSurfaceVariant,
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
@@ -430,21 +445,21 @@ class DashboardScreen extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            color: const Color(0xFFE0F2FE),
+            color: colors.primaryContainer,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFBAE6FD)),
+            border: Border.all(color: colors.primary.withValues(alpha: 0.3)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
-            children: const [
-              Icon(Iconsax.status, size: 14, color: Color(0xFF0284C7)),
-              SizedBox(width: 4),
+            children: [
+              Icon(Iconsax.status, size: 14, color: colors.primary),
+              const SizedBox(width: 4),
               Text(
                 'Live',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF0284C7),
+                  color: colors.primary,
                 ),
               ),
             ],
@@ -613,14 +628,15 @@ class DashboardScreen extends StatelessWidget {
   }
 
   Widget _buildOperationalMetrics(BuildContext context, RecordProvider provider) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: colors.outlineVariant),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 14,
             offset: const Offset(0, 4),
           ),
@@ -629,19 +645,38 @@ class DashboardScreen extends StatelessWidget {
       child: Column(
         children: [
           // 1. Papers Remaining
-          _buildMetricRow(
-            context: context,
-            icon: Iconsax.document_copy,
-            iconColor: const Color(0xFF0284C7),
-            iconBg: const Color(0xFFE0F2FE),
-            title: 'Paper Stock Remaining',
-            subtitle: '${NumberFormatter.format(provider.totalPagesPrinted)} sheets printed so far',
-            value: NumberFormatter.format(provider.papersRemaining),
-            badgeLabel: provider.papersRemaining < 50 ? 'Low Stock' : 'In Stock',
-            badgeBg: provider.papersRemaining < 50 ? const Color(0xFFFEE2E2) : const Color(0xFFECFDF5),
-            badgeTextColor: provider.papersRemaining < 50 ? const Color(0xFFDC2626) : const Color(0xFF059669),
+          Builder(
+            builder: (context) {
+              final isLowStock = provider.papersRemaining < 100;
+              return Container(
+                decoration: BoxDecoration(
+                  color: isLowStock
+                      ? const Color(0xFFEF4444).withValues(alpha: 0.08)
+                      : Colors.transparent,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                child: _buildMetricRow(
+                  context: context,
+                  icon: Iconsax.document_copy,
+                  iconColor: isLowStock ? const Color(0xFFDC2626) : colors.primary,
+                  iconBg: isLowStock
+                      ? const Color(0xFFEF4444).withValues(alpha: 0.15)
+                      : colors.primaryContainer,
+                  title: 'Paper Stock Remaining',
+                  subtitle: '${NumberFormatter.format(provider.totalPagesPrinted)} sheets printed so far',
+                  value: NumberFormatter.format(provider.papersRemaining),
+                  badgeLabel: isLowStock ? 'Low Stock (<100)' : 'In Stock',
+                  badgeBg: isLowStock
+                      ? const Color(0xFFEF4444).withValues(alpha: 0.18)
+                      : Colors.green.withValues(alpha: 0.12),
+                  badgeTextColor: isLowStock
+                      ? const Color(0xFFDC2626)
+                      : const Color(0xFF059669),
+                ),
+              );
+            },
           ),
-          const Divider(height: 1, indent: 64, endIndent: 16, color: Color(0xFFF1F5F9)),
+          Divider(height: 1, indent: 64, endIndent: 16, color: colors.outlineVariant),
 
           // 2. Pending Sync Records
           InkWell(
@@ -676,8 +711,8 @@ class DashboardScreen extends StatelessWidget {
                   ? const Color(0xFF059669)
                   : const Color(0xFFD97706),
               iconBg: provider.pendingSyncRecordsCount == 0
-                  ? const Color(0xFFECFDF5)
-                  : const Color(0xFFFEF3C7),
+                  ? Colors.green.withValues(alpha: 0.12)
+                  : Colors.amber.withValues(alpha: 0.15),
               title: 'Cloud Synchronization',
               subtitle: provider.pendingSyncRecordsCount == 0
                   ? 'All records up to date on server'
@@ -686,23 +721,27 @@ class DashboardScreen extends StatelessWidget {
                   ? 'Synced'
                   : '${provider.pendingSyncRecordsCount} queued',
               badgeLabel: provider.pendingSyncRecordsCount == 0 ? 'Optimal' : 'Needs Sync',
-              badgeBg: provider.pendingSyncRecordsCount == 0 ? const Color(0xFFECFDF5) : const Color(0xFFFEF3C7),
-              badgeTextColor: provider.pendingSyncRecordsCount == 0 ? const Color(0xFF059669) : const Color(0xFFD97706),
+              badgeBg: provider.pendingSyncRecordsCount == 0
+                  ? Colors.green.withValues(alpha: 0.12)
+                  : Colors.amber.withValues(alpha: 0.15),
+              badgeTextColor: provider.pendingSyncRecordsCount == 0
+                  ? const Color(0xFF059669)
+                  : const Color(0xFFD97706),
             ),
           ),
-          const Divider(height: 1, indent: 64, endIndent: 16, color: Color(0xFFF1F5F9)),
+          Divider(height: 1, indent: 64, endIndent: 16, color: colors.outlineVariant),
 
           // 3. Profit Today
           _buildMetricRow(
             context: context,
             icon: Iconsax.trend_up,
             iconColor: const Color(0xFF10B981),
-            iconBg: const Color(0xFFD1FAE5),
+            iconBg: Colors.green.withValues(alpha: 0.12),
             title: 'Net Profit Today',
             subtitle: '${NumberFormatter.formatCurrency(provider.config.netProfitPerPaper)} net per sheet printed',
             value: NumberFormatter.formatCurrency(provider.profitToday),
             badgeLabel: 'Profit Margin',
-            badgeBg: const Color(0xFFECFDF5),
+            badgeBg: Colors.green.withValues(alpha: 0.12),
             badgeTextColor: const Color(0xFF059669),
           ),
         ],
@@ -722,6 +761,7 @@ class DashboardScreen extends StatelessWidget {
     required Color badgeBg,
     required Color badgeTextColor,
   }) {
+    final colors = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(
@@ -741,18 +781,18 @@ class DashboardScreen extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1E293B),
+                    color: colors.onSurface,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
-                    color: Color(0xFF64748B),
+                    color: colors.onSurfaceVariant,
                     fontWeight: FontWeight.w500,
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -766,10 +806,10 @@ class DashboardScreen extends StatelessWidget {
             children: [
               Text(
                 value,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF0F172A),
+                  color: colors.onSurface,
                 ),
               ),
               const SizedBox(height: 3),
@@ -796,31 +836,35 @@ class DashboardScreen extends StatelessWidget {
   }
 
   Widget _buildCostBreakdownCard(BuildContext context, RecordProvider provider) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
+        color: colors.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: colors.outlineVariant),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildBreakdownPill(
+            context: context,
             icon: Iconsax.tag,
             label: 'Sale Price',
             value: NumberFormatter.formatCurrency(provider.config.pricePerPaper),
-            color: const Color(0xFF0284C7),
+            color: colors.primary,
           ),
-          Container(height: 28, width: 1, color: const Color(0xFFCBD5E1)),
+          Container(height: 28, width: 1, color: colors.outlineVariant),
           _buildBreakdownPill(
+            context: context,
             icon: Iconsax.money_send,
             label: 'Cost / Page',
             value: NumberFormatter.formatCurrency(provider.config.totalExpensePerPaper),
             color: const Color(0xFFD97706),
           ),
-          Container(height: 28, width: 1, color: const Color(0xFFCBD5E1)),
+          Container(height: 28, width: 1, color: colors.outlineVariant),
           _buildBreakdownPill(
+            context: context,
             icon: Iconsax.money_recive,
             label: 'Net Margin',
             value: NumberFormatter.formatCurrency(provider.config.netProfitPerPaper),
@@ -832,11 +876,13 @@ class DashboardScreen extends StatelessWidget {
   }
 
   Widget _buildBreakdownPill({
+    required BuildContext context,
     required IconData icon,
     required String label,
     required String value,
     required Color color,
   }) {
+    final labelColor = Theme.of(context).colorScheme.onSurfaceVariant;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -848,10 +894,10 @@ class DashboardScreen extends StatelessWidget {
           children: [
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF64748B),
+                color: labelColor,
               ),
             ),
             const SizedBox(height: 1),
@@ -870,6 +916,7 @@ class DashboardScreen extends StatelessWidget {
   }
 
   Widget _buildQuickActions(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Row(
       children: [
         // Primary POS Action
@@ -896,11 +943,11 @@ class DashboardScreen extends StatelessWidget {
               child: InkWell(
                 onTap: onNavigateToPOS,
                 borderRadius: BorderRadius.circular(16),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 16),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 15, horizontal: 16),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
+                    children: [
                       Icon(Iconsax.shop, color: Colors.white, size: 20),
                       SizedBox(width: 10),
                       Text(
@@ -925,12 +972,12 @@ class DashboardScreen extends StatelessWidget {
           flex: 4,
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: colors.surface,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFCBD5E1)),
+              border: Border.all(color: colors.outlineVariant),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                  color: Colors.black.withValues(alpha: 0.04),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -945,13 +992,13 @@ class DashboardScreen extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 12),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Iconsax.receipt_2_1, color: Color(0xFF334155), size: 19),
-                      SizedBox(width: 8),
+                    children: [
+                      Icon(Iconsax.receipt_2_1, color: colors.onSurface, size: 19),
+                      const SizedBox(width: 8),
                       Text(
                         'All Orders',
                         style: TextStyle(
-                          color: Color(0xFF1E293B),
+                          color: colors.onSurface,
                           fontWeight: FontWeight.w700,
                           fontSize: 13,
                         ),
@@ -968,19 +1015,20 @@ class DashboardScreen extends StatelessWidget {
   }
 
   Widget _buildRecentHeader(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Row(
-          children: const [
-            Icon(Iconsax.clock, size: 18, color: Color(0xFF475569)),
-            SizedBox(width: 8),
+          children: [
+            Icon(Iconsax.clock, size: 18, color: colors.onSurfaceVariant),
+            const SizedBox(width: 8),
             Text(
               'Recent Transactions',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
-                color: Color(0xFF0F172A),
+                color: colors.onSurface,
                 letterSpacing: -0.3,
               ),
             ),
@@ -991,7 +1039,7 @@ class DashboardScreen extends StatelessWidget {
           icon: const Icon(Iconsax.arrow_right_3, size: 14),
           label: const Text('View All'),
           style: TextButton.styleFrom(
-            foregroundColor: const Color(0xFF0284C7),
+            foregroundColor: colors.primary,
             textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
             visualDensity: VisualDensity.compact,
           ),
@@ -1002,15 +1050,16 @@ class DashboardScreen extends StatelessWidget {
 
   Widget _buildRecentItem(BuildContext context, dynamic record) {
     final bool hasBalance = record.balance > 0;
+    final colors = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: colors.outlineVariant),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1036,12 +1085,12 @@ class DashboardScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE0F2FE),
+                    color: colors.primaryContainer,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Iconsax.receipt,
-                    color: Color(0xFF0284C7),
+                    color: colors.primary,
                     size: 20,
                   ),
                 ),
@@ -1053,10 +1102,10 @@ class DashboardScreen extends StatelessWidget {
                     children: [
                       Text(
                         record.customerName,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 14,
-                          color: Color(0xFF0F172A),
+                          color: colors.onSurface,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -1067,9 +1116,9 @@ class DashboardScreen extends StatelessWidget {
                           Flexible(
                             child: Text(
                               '${record.jobDescription} • ${DateFormat('dd MMM').format(record.timestamp)}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 11,
-                                color: Color(0xFF64748B),
+                                color: colors.onSurfaceVariant,
                                 fontWeight: FontWeight.w500,
                               ),
                               overflow: TextOverflow.ellipsis,
@@ -1106,10 +1155,10 @@ class DashboardScreen extends StatelessWidget {
                   children: [
                     Text(
                       NumberFormatter.formatCurrency(record.totalAmount),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w800,
                         fontSize: 14,
-                        color: Color(0xFF0F172A),
+                        color: colors.onSurface,
                       ),
                     ),
                     const SizedBox(height: 3),
@@ -1117,8 +1166,8 @@ class DashboardScreen extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
                         color: hasBalance
-                            ? const Color(0xFFFEE2E2)
-                            : const Color(0xFFECFDF5),
+                            ? Colors.red.withValues(alpha: 0.12)
+                            : Colors.green.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -1145,43 +1194,44 @@ class DashboardScreen extends StatelessWidget {
   }
 
   Widget _buildEmptyRecent(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: colors.outlineVariant),
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
+              color: colors.surfaceContainerHighest,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Iconsax.receipt_item,
               size: 36,
-              color: Color(0xFF94A3B8),
+              color: colors.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 14),
-          const Text(
+          Text(
             'No orders created yet',
             style: TextStyle(
               fontWeight: FontWeight.w700,
               fontSize: 15,
-              color: Color(0xFF1E293B),
+              color: colors.onSurface,
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'Tap "New Sale / POS" above to record your first print job.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12,
-              color: Color(0xFF64748B),
+              color: colors.onSurfaceVariant,
               fontWeight: FontWeight.w500,
             ),
           ),

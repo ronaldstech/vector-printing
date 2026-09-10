@@ -78,42 +78,44 @@ class _RecordsScreenState extends State<RecordsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: colors.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         titleSpacing: 16,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(color: const Color(0xFFE2E8F0), height: 1),
+          child: Container(color: colors.outlineVariant, height: 1),
         ),
         title: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFFE0F2FE),
+                color: colors.primaryContainer,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
+              child: Icon(
                 Iconsax.receipt_2_1,
-                color: Color(0xFF0284C7),
+                color: colors.primary,
                 size: 20,
               ),
             ),
             const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Text(
                   'Orders & Records',
                   style: TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 17,
                     letterSpacing: -0.3,
-                    color: Color(0xFF0F172A),
+                    color: colors.onSurface,
                   ),
                 ),
                 Text(
@@ -121,7 +123,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF64748B),
+                    color: colors.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -141,10 +143,10 @@ class _RecordsScreenState extends State<RecordsScreen> {
                   children: [
                     Container(
                       decoration: BoxDecoration(
-                        color: hasPending ? const Color(0xFFFEF2F2) : const Color(0xFFF1F5F9),
+                        color: hasPending ? Colors.red.withValues(alpha: 0.12) : colors.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: hasPending ? const Color(0xFFFCA5A5) : const Color(0xFFE2E8F0),
+                          color: hasPending ? Colors.red.withValues(alpha: 0.3) : colors.outlineVariant,
                           width: hasPending ? 1.2 : 1.0,
                         ),
                       ),
@@ -155,7 +157,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
                         icon: Icon(
                           hasPending ? Iconsax.cloud_cross : Iconsax.refresh,
                           size: 18,
-                          color: hasPending ? const Color(0xFFDC2626) : const Color(0xFF475569),
+                          color: hasPending ? const Color(0xFFDC2626) : colors.onSurfaceVariant,
                         ),
                         constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
                         padding: EdgeInsets.zero,
@@ -210,7 +212,6 @@ class _RecordsScreenState extends State<RecordsScreen> {
                                 color: Colors.white,
                                 fontSize: 9.5,
                                 fontWeight: FontWeight.w900,
-                                height: 1,
                               ),
                             ),
                           ),
@@ -224,17 +225,32 @@ class _RecordsScreenState extends State<RecordsScreen> {
         ],
       ),
       body: Consumer<RecordProvider>(
-        builder: (context, provider, child) {
-          final pendingCount = provider.pendingSyncRecordsCount;
-          final filtered = provider.records.where((record) {
-            final matchesQuery = record.customerName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                record.jobDescription.toLowerCase().contains(_searchQuery.toLowerCase());
-            if (!matchesQuery) return false;
-            return _matchesPeriod(record.timestamp);
+        builder: (context, recordProvider, child) {
+          final allRecords = recordProvider.records;
+          final pendingCount = recordProvider.pendingSyncRecordsCount;
+
+          // Filter by period and search text
+          final filtered = allRecords.where((record) {
+            final matchesSearch = _searchQuery.isEmpty ||
+                record.customerName
+                    .toLowerCase()
+                    .contains(_searchQuery.toLowerCase()) ||
+                record.jobDescription
+                    .toLowerCase()
+                    .contains(_searchQuery.toLowerCase());
+            final matchesTime = _matchesPeriod(record.timestamp);
+            return matchesSearch && matchesTime;
           }).toList();
 
-          final double filteredTotal = filtered.fold(0.0, (sum, r) => sum + r.totalAmount);
-          final int filteredSheets = filtered.fold(0, (sum, r) => sum + r.quantity);
+          // Calculate period-specific totals
+          final filteredTotal = filtered.fold<double>(
+            0.0,
+            (sum, item) => sum + item.totalAmount,
+          );
+          final filteredSheets = filtered.fold<int>(
+            0,
+            (sum, item) => sum + item.quantity,
+          );
 
           return Column(
             children: [
@@ -243,12 +259,10 @@ class _RecordsScreenState extends State<RecordsScreen> {
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Color(0xFFFFF1F2), Color(0xFFFFE4E6)],
-                    ),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.12),
                     border: Border(
-                      bottom: BorderSide(color: Color(0xFFFECDD3), width: 1),
+                      bottom: BorderSide(color: Colors.red.withValues(alpha: 0.25), width: 1),
                     ),
                   ),
                   child: Row(
@@ -269,7 +283,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
                       Expanded(
                         child: RichText(
                           text: TextSpan(
-                            style: const TextStyle(fontSize: 12, color: Color(0xFF9F1239)),
+                            style: TextStyle(fontSize: 12, color: colors.onSurface),
                             children: [
                               TextSpan(
                                 text: 'You have $pendingCount ${pendingCount == 1 ? 'record' : 'records'} ',
@@ -340,43 +354,43 @@ class _RecordsScreenState extends State<RecordsScreen> {
                 ),
               // Search & Filter Header Container
               Container(
-                color: Colors.white,
+                color: colors.surface,
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
                 child: Column(
                   children: [
                     // Modern Search Field
                     TextField(
                       onChanged: (val) => setState(() => _searchQuery = val),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF0F172A),
+                        color: colors.onSurface,
                       ),
                       decoration: InputDecoration(
                         hintText: 'Search customer name or job description...',
-                        hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
-                        prefixIcon: const Icon(Iconsax.search_normal, size: 18, color: Color(0xFF64748B)),
+                        hintStyle: TextStyle(color: colors.onSurfaceVariant, fontSize: 13),
+                        prefixIcon: Icon(Iconsax.search_normal, size: 18, color: colors.onSurfaceVariant),
                         suffixIcon: _searchQuery.isNotEmpty
                             ? IconButton(
-                                icon: const Icon(Iconsax.close_circle, size: 18, color: Color(0xFF94A3B8)),
+                                icon: Icon(Iconsax.close_circle, size: 18, color: colors.onSurfaceVariant),
                                 onPressed: () => setState(() => _searchQuery = ''),
                               )
                             : null,
                         filled: true,
-                        fillColor: const Color(0xFFF8FAFC),
+                        fillColor: colors.surfaceContainerHighest,
                         isDense: true,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                          borderSide: BorderSide(color: colors.outlineVariant),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                          borderSide: BorderSide(color: colors.outlineVariant),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: Color(0xFF0284C7), width: 1.5),
+                          borderSide: BorderSide(color: colors.primary, width: 1.5),
                         ),
                       ),
                     ),
@@ -406,15 +420,15 @@ class _RecordsScreenState extends State<RecordsScreen> {
                                 duration: const Duration(milliseconds: 180),
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                                 decoration: BoxDecoration(
-                                  color: isSelected ? const Color(0xFF0284C7) : const Color(0xFFF1F5F9),
+                                  color: isSelected ? colors.primary : colors.surfaceContainerHighest,
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: isSelected ? const Color(0xFF0284C7) : const Color(0xFFE2E8F0),
+                                    color: isSelected ? colors.primary : colors.outlineVariant,
                                   ),
                                   boxShadow: isSelected
                                       ? [
                                           BoxShadow(
-                                            color: const Color(0xFF0284C7).withValues(alpha: 0.25),
+                                            color: colors.primary.withValues(alpha: 0.25),
                                             blurRadius: 6,
                                             offset: const Offset(0, 2),
                                           ),
@@ -428,7 +442,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
                                       Icon(
                                         Iconsax.calendar_1,
                                         size: 14,
-                                        color: isSelected ? Colors.white : const Color(0xFF475569),
+                                        color: isSelected ? Colors.white : colors.onSurfaceVariant,
                                       ),
                                       const SizedBox(width: 5),
                                     ],
@@ -437,7 +451,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                        color: isSelected ? Colors.white : const Color(0xFF475569),
+                                        color: isSelected ? Colors.white : colors.onSurfaceVariant,
                                       ),
                                     ),
                                   ],
@@ -455,10 +469,10 @@ class _RecordsScreenState extends State<RecordsScreen> {
               // Summary Stats Strip for Current Filtered Results
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF1F5F9),
+                decoration: BoxDecoration(
+                  color: colors.surfaceContainerHighest,
                   border: Border(
-                    bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1),
+                    bottom: BorderSide(color: colors.outlineVariant, width: 1),
                   ),
                 ),
                 child: Row(
@@ -468,17 +482,17 @@ class _RecordsScreenState extends State<RecordsScreen> {
                       children: [
                         Text(
                           '${NumberFormatter.format(filtered.length)} orders',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFF0F172A),
+                            color: colors.onSurface,
                           ),
                         ),
                         Text(
                           ' (${NumberFormatter.format(filteredSheets)} sheets)',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF64748B),
+                            color: colors.onSurfaceVariant,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -486,20 +500,20 @@ class _RecordsScreenState extends State<RecordsScreen> {
                     ),
                     Row(
                       children: [
-                        const Text(
+                        Text(
                           'Gross: ',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF64748B),
+                            color: colors.onSurfaceVariant,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         Text(
                           NumberFormatter.formatCurrency(filteredTotal),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w900,
-                            color: Color(0xFF0284C7),
+                            color: colors.primary,
                           ),
                         ),
                         if (_selectedPeriod != RecordPeriodFilter.all || _searchQuery.isNotEmpty) ...[
@@ -539,14 +553,14 @@ class _RecordsScreenState extends State<RecordsScreen> {
                             children: [
                               Container(
                                 padding: const EdgeInsets.all(20),
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFF1F5F9),
+                                decoration: BoxDecoration(
+                                  color: colors.surfaceContainerHighest,
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   Iconsax.document_filter,
                                   size: 40,
-                                  color: Color(0xFF94A3B8),
+                                  color: colors.onSurfaceVariant,
                                 ),
                               ),
                               const SizedBox(height: 16),
@@ -555,19 +569,19 @@ class _RecordsScreenState extends State<RecordsScreen> {
                                     ? 'No orders matching "$_searchQuery"'
                                     : 'No orders recorded for this period',
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFF1E293B),
+                                  color: colors.onSurface,
                                 ),
                               ),
                               const SizedBox(height: 6),
-                              const Text(
+                              Text(
                                 'Try changing your period filter or clearing search keywords.',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Color(0xFF64748B),
+                                  color: colors.onSurfaceVariant,
                                 ),
                               ),
                             ],
@@ -584,12 +598,12 @@ class _RecordsScreenState extends State<RecordsScreen> {
                           return Container(
                             margin: const EdgeInsets.only(bottom: 10),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: colors.surface,
                               borderRadius: BorderRadius.circular(18),
-                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                              border: Border.all(color: colors.outlineVariant),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                                  color: Colors.black.withValues(alpha: 0.03),
                                   blurRadius: 10,
                                   offset: const Offset(0, 3),
                                 ),
@@ -617,8 +631,8 @@ class _RecordsScreenState extends State<RecordsScreen> {
                                         padding: const EdgeInsets.all(10),
                                         decoration: BoxDecoration(
                                           color: hasBalance
-                                              ? const Color(0xFFFEF3C7)
-                                              : const Color(0xFFECFDF5),
+                                              ? Colors.amber.withValues(alpha: 0.15)
+                                              : Colors.green.withValues(alpha: 0.12),
                                           borderRadius: BorderRadius.circular(14),
                                         ),
                                         child: Icon(
@@ -638,10 +652,10 @@ class _RecordsScreenState extends State<RecordsScreen> {
                                           children: [
                                             Text(
                                               record.customerName,
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontWeight: FontWeight.w800,
                                                 fontSize: 14.5,
-                                                color: Color(0xFF0F172A),
+                                                color: colors.onSurface,
                                               ),
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
@@ -649,9 +663,9 @@ class _RecordsScreenState extends State<RecordsScreen> {
                                             const SizedBox(height: 3),
                                             Text(
                                               '${record.jobDescription} • ${NumberFormatter.format(record.quantity)} sheet(s)',
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontSize: 12,
-                                                color: Color(0xFF475569),
+                                                color: colors.onSurfaceVariant,
                                                 fontWeight: FontWeight.w500,
                                               ),
                                               maxLines: 1,
@@ -666,17 +680,17 @@ class _RecordsScreenState extends State<RecordsScreen> {
                                                 Row(
                                                   mainAxisSize: MainAxisSize.min,
                                                   children: [
-                                                    const Icon(
+                                                    Icon(
                                                       Iconsax.calendar_1,
                                                       size: 13,
-                                                      color: Color(0xFF94A3B8),
+                                                      color: colors.onSurfaceVariant,
                                                     ),
                                                     const SizedBox(width: 4),
                                                     Text(
                                                       DateFormat('dd MMM, hh:mm a').format(record.timestamp),
-                                                      style: const TextStyle(
+                                                      style: TextStyle(
                                                         fontSize: 11,
-                                                        color: Color(0xFF64748B),
+                                                        color: colors.onSurfaceVariant,
                                                         fontWeight: FontWeight.w500,
                                                       ),
                                                     ),
@@ -686,14 +700,14 @@ class _RecordsScreenState extends State<RecordsScreen> {
                                                   Container(
                                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                                                     decoration: BoxDecoration(
-                                                      color: const Color(0xFFF1F5F9),
+                                                      color: colors.surfaceContainerHighest,
                                                       borderRadius: BorderRadius.circular(6),
                                                     ),
                                                     child: Text(
                                                       record.createdBy!,
-                                                      style: const TextStyle(
+                                                      style: TextStyle(
                                                         fontSize: 10,
-                                                        color: Color(0xFF475569),
+                                                        color: colors.onSurfaceVariant,
                                                         fontWeight: FontWeight.w600,
                                                       ),
                                                       maxLines: 1,
@@ -713,10 +727,10 @@ class _RecordsScreenState extends State<RecordsScreen> {
                                         children: [
                                           Text(
                                             NumberFormatter.formatCurrency(record.totalAmount),
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontWeight: FontWeight.w900,
                                               fontSize: 15,
-                                              color: Color(0xFF0F172A),
+                                              color: colors.onSurface,
                                               letterSpacing: -0.3,
                                             ),
                                           ),
@@ -725,8 +739,8 @@ class _RecordsScreenState extends State<RecordsScreen> {
                                             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                             decoration: BoxDecoration(
                                               color: hasBalance
-                                                  ? const Color(0xFFFEE2E2)
-                                                  : const Color(0xFFECFDF5),
+                                                  ? Colors.red.withValues(alpha: 0.12)
+                                                  : Colors.green.withValues(alpha: 0.12),
                                               borderRadius: BorderRadius.circular(6),
                                             ),
                                             child: Text(

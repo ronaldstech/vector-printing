@@ -11,28 +11,30 @@ class PayoutHistoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: colors.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         titleSpacing: 0,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(color: const Color(0xFFE2E8F0), height: 1),
+          child: Container(color: colors.outlineVariant, height: 1),
         ),
         title: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: const Color(0xFFE0F2FE),
+                color: colors.primaryContainer,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(
+              child: Icon(
                 Iconsax.receipt_item,
-                color: Color(0xFF0284C7),
+                color: colors.primary,
                 size: 16,
               ),
             ),
@@ -41,14 +43,14 @@ class PayoutHistoryScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
-                children: const [
+                children: [
                   Text(
                     'Payout History',
                     style: TextStyle(
                       fontWeight: FontWeight.w800,
                       fontSize: 15,
                       letterSpacing: -0.3,
-                      color: Color(0xFF0F172A),
+                      color: colors.onSurface,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -58,7 +60,7 @@ class PayoutHistoryScreen extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFF64748B),
+                      color: colors.onSurfaceVariant,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -74,16 +76,16 @@ class PayoutHistoryScreen extends StatelessWidget {
               margin: const EdgeInsets.symmetric(vertical: 11, horizontal: 10),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
+                color: colors.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: colors.outlineVariant),
               ),
               child: Center(
                 child: Text(
                   '${NumberFormatter.format(provider.payoutRecords.length)} payouts',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11.5,
-                    color: Color(0xFF0F172A),
+                    color: colors.onSurface,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -97,7 +99,7 @@ class PayoutHistoryScreen extends StatelessWidget {
           final payouts = provider.payoutRecords;
 
           if (payouts.isEmpty) {
-            return _buildEmptyState();
+            return _buildEmptyState(context);
           }
 
           final totalPaidOut = provider.totalPaidOutToUser;
@@ -120,7 +122,7 @@ class PayoutHistoryScreen extends StatelessWidget {
                   );
                 }
                 final record = payouts[index - 1];
-                return _buildPayoutCard(record);
+                return _buildPayoutCard(context, record);
               },
             ),
           );
@@ -268,19 +270,20 @@ class PayoutHistoryScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPayoutCard(PayoutRecord record) {
+  Widget _buildPayoutCard(BuildContext context, PayoutRecord record) {
+    final colors = Theme.of(context).colorScheme;
     final hasNote = record.note != null && record.note!.isNotEmpty;
     final hasRecordedBy = record.recordedBy != null && record.recordedBy!.isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: colors.outlineVariant),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -296,7 +299,7 @@ class PayoutHistoryScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFECFDF5),
+                    color: Colors.green.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
@@ -312,20 +315,20 @@ class PayoutHistoryScreen extends StatelessWidget {
                     children: [
                       Text(
                         DateFormat('EEEE, d MMMM yyyy').format(record.timestamp),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 13.5,
-                          color: Color(0xFF0F172A),
+                          color: colors.onSurface,
                         ),
                       ),
                       const SizedBox(height: 3),
                       Row(
                         children: [
-                          const Icon(Iconsax.clock, size: 12, color: Color(0xFF94A3B8)),
+                          Icon(Iconsax.clock, size: 12, color: colors.onSurfaceVariant),
                           const SizedBox(width: 4),
                           Text(
                             DateFormat('hh:mm a').format(record.timestamp),
-                            style: const TextStyle(color: Color(0xFF64748B), fontSize: 11, fontWeight: FontWeight.w500),
+                            style: TextStyle(color: colors.onSurfaceVariant, fontSize: 11, fontWeight: FontWeight.w500),
                           ),
                           const SizedBox(width: 8),
                           Icon(
@@ -350,9 +353,9 @@ class PayoutHistoryScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFECFDF5),
+                    color: Colors.green.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFA7F3D0)),
+                    border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
                   ),
                   child: Text(
                     NumberFormatter.formatCurrency(record.amount),
@@ -371,9 +374,9 @@ class PayoutHistoryScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFEF3C7),
+                  color: Colors.amber.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFFDE68A)),
+                  border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
@@ -382,7 +385,7 @@ class PayoutHistoryScreen extends StatelessWidget {
                     Expanded(
                       child: Text(
                         record.note!,
-                        style: const TextStyle(fontSize: 12, color: Color(0xFF92400E), fontWeight: FontWeight.w600),
+                        style: TextStyle(fontSize: 12, color: colors.onSurface, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ],
@@ -394,11 +397,11 @@ class PayoutHistoryScreen extends StatelessWidget {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  const Icon(Iconsax.security_user, size: 13, color: Color(0xFF94A3B8)),
+                  Icon(Iconsax.security_user, size: 13, color: colors.onSurfaceVariant),
                   const SizedBox(width: 4),
                   Text(
                     'Recorded by ${record.recordedBy}',
-                    style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                    style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant, fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
@@ -409,7 +412,8 @@ class PayoutHistoryScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -418,32 +422,32 @@ class PayoutHistoryScreen extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Color(0xFFF1F5F9),
+              decoration: BoxDecoration(
+                color: colors.surfaceContainerHighest,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Iconsax.empty_wallet_remove,
                 size: 44,
-                color: Color(0xFF94A3B8),
+                color: colors.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'No Payouts Recorded Yet',
               style: TextStyle(
                 fontWeight: FontWeight.w800,
                 fontSize: 16,
-                color: Color(0xFF1E293B),
+                color: colors.onSurface,
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               'When an administrator records a profit distribution, it will appear here.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12,
-                color: Color(0xFF64748B),
+                color: colors.onSurfaceVariant,
                 fontWeight: FontWeight.w500,
               ),
             ),
