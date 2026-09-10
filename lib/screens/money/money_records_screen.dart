@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:iconsax/iconsax.dart';
 import '../../models/record_model.dart';
 import '../../models/app_config_model.dart';
 import '../../providers/record_provider.dart';
@@ -71,8 +72,8 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
         return 'All Time';
       case MoneyPeriodFilter.custom:
         return _customSelectedDate != null
-            ? DateFormat('dd MMM yyyy').format(_customSelectedDate!)
-            : 'Custom Date';
+            ? DateFormat('d MMM yyyy').format(_customSelectedDate!)
+            : 'Select Date';
     }
   }
 
@@ -84,11 +85,22 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Row(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
           children: [
-            Icon(Icons.payments, color: Colors.teal),
-            SizedBox(width: 8),
-            Text('Record Payment to User', style: TextStyle(fontSize: 18)),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE0F2FE),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Iconsax.wallet_add_1, color: Color(0xFF0284C7), size: 20),
+            ),
+            const SizedBox(width: 10),
+            const Text(
+              'Record Payout',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+            ),
           ],
         ),
         content: Form(
@@ -97,24 +109,40 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Current user balance to be paid: ${NumberFormatter.formatCurrency(provider.userPayoutBalance)}',
-                style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.teal),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Unpaid Balance:',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                    ),
+                    Text(
+                      NumberFormatter.formatCurrency(provider.userPayoutBalance),
+                      style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF0284C7), fontSize: 13),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 12),
-              Text(
-                'Enter the amount of profit share handed over to the user. This will be subtracted from the remaining balance.',
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
               TextFormField(
                 controller: controller,
                 keyboardType: TextInputType.number,
                 autofocus: true,
-                decoration: const InputDecoration(
-                  labelText: 'Amount Paid to User',
-                  prefixText: 'MWK ',
-                  border: OutlineInputBorder(),
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                decoration: InputDecoration(
+                  labelText: 'Amount Paid (MWK)',
+                  labelStyle: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                  prefixIcon: const Icon(Iconsax.empty_wallet, size: 20, color: Color(0xFF0284C7)),
+                  filled: true,
+                  fillColor: const Color(0xFFF8FAFC),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 validator: (val) {
                   if (val == null || val.trim().isEmpty) return 'Enter an amount';
@@ -127,11 +155,15 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
               TextFormField(
                 controller: noteController,
                 maxLines: 2,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Note (optional)',
-                  hintText: 'e.g. Weekly profit payment',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.notes_outlined),
+                  labelStyle: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                  hintText: 'e.g. Weekly profit distribution',
+                  hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                  filled: true,
+                  fillColor: const Color(0xFFF8FAFC),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  prefixIcon: const Icon(Iconsax.note_text, size: 20, color: Color(0xFF64748B)),
                 ),
               ),
             ],
@@ -140,9 +172,13 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
           ),
           FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF0284C7),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
             onPressed: () async {
               if (formKey.currentState!.validate()) {
                 final amount = double.parse(controller.text.trim());
@@ -157,13 +193,15 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Recorded ${NumberFormatter.formatCurrency(amount)} paid to user!'),
-                      backgroundColor: Colors.teal,
+                      backgroundColor: const Color(0xFF059669),
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                   );
                 }
               }
             },
-            child: const Text('Record Payout'),
+            child: const Text('Confirm Payout', style: TextStyle(fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -177,8 +215,65 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
     final adminEmail = auth.currentUser?.email;
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Money Records', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        titleSpacing: 16,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(color: const Color(0xFFE2E8F0), height: 1),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE0F2FE),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Iconsax.wallet_3,
+                color: Color(0xFF0284C7),
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'Money Records',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 17,
+                    letterSpacing: -0.3,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+                Text(
+                  'Revenue, Expenses & Profit Sharing',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Payout History',
+            icon: const Icon(Iconsax.receipt_item, size: 20, color: Color(0xFF475569)),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const PayoutHistoryScreen()),
+            ),
+          ),
+        ],
       ),
       body: Consumer<RecordProvider>(
         builder: (context, provider, child) {
@@ -196,33 +291,56 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
           final double myProfit = totalProfit * 0.50;
 
           return RefreshIndicator(
+            color: const Color(0xFF0284C7),
             onRefresh: () => provider.fetchRecords(),
             child: ListView(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 96.0),
               children: [
-                // 1. Balance to be Paid Card (Prominently featured at the top)
+                // 1. Balance to be Paid Hero Card
                 _buildPayoutBalanceCard(context, provider, isAdmin, adminEmail),
                 const SizedBox(height: 16),
 
-                // 2. Filter Bar (Today, Week, Month, All, Custom)
+                // 2. Filter Bar
                 _buildFilterBar(),
-                const SizedBox(height: 16),
+                const SizedBox(height: 18),
 
                 // 3. Period Financial Summary Header
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      '${_getPeriodLabel(_selectedPeriod)} Financials',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    Row(
+                      children: [
+                        const Icon(Iconsax.chart_2, size: 17, color: Color(0xFF0284C7)),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${_getPeriodLabel(_selectedPeriod)} Financials',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF0F172A),
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                      ],
                     ),
-                    Text(
-                      '$totalPages pages printed',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${NumberFormatter.format(totalPages)} pages printed',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF475569),
+                        ),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
 
                 // 4. Financial Metric Cards Grid
                 _buildFinancialGrid(
@@ -235,25 +353,40 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // 5. Expected Profit Projections (all users)
+                // 5. Expected Profit Projections
                 _buildExpectedProfitCard(provider),
                 const SizedBox(height: 20),
 
-                // 5. Individual Order Financial Breakdown List
+                // 6. Individual Order Financial Breakdown List
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Order Breakdown (${NumberFormatter.format(filteredRecords.length)})',
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                    Row(
+                      children: [
+                        const Icon(Iconsax.receipt_search, size: 16, color: Color(0xFF475569)),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Order Breakdown (${NumberFormatter.format(filteredRecords.length)})',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF0F172A),
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                      ],
                     ),
                     Text(
-                      'Price: ${NumberFormatter.formatCurrency(config.pricePerPaper)}/pg',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                      'Rate: ${NumberFormatter.formatCurrency(config.pricePerPaper)}/pg',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF64748B),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
 
                 if (filteredRecords.isEmpty)
                   _buildEmptyState()
@@ -272,38 +405,67 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
     final totalUserShare = provider.totalUserProfitShare;
     final paidOut = provider.totalPaidOutToUser;
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            colors: [
-              const Color(0xFF0F766E), // Deep Teal
-              const Color(0xFF14B8A6), // Bright Teal
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF0F172A), // Dark slate
+            Color(0xFF065F46), // Deep emerald
+            Color(0xFF059669), // Vivid mint/green
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          stops: [0.0, 0.6, 1.0],
         ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF059669).withValues(alpha: 0.28),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Row(
-                  children: [
-                    Icon(Icons.account_balance_wallet, color: Colors.white, size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      'User Profit Balance to be Paid',
-                      style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
-                    ),
-                  ],
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Iconsax.empty_wallet_tick,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'Profit Share Balance',
+                          style: TextStyle(
+                            color: Color(0xFFE2E8F0),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
@@ -311,68 +473,86 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Text(
-                    '50% Share',
-                    style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                    '50% Split',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             Text(
               NumberFormatter.formatCurrency(balance),
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 32,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.5,
               ),
             ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Total Earned: ${NumberFormatter.formatCurrency(totalUserShare)}',
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-                Text(
-                  'Already Paid: ${NumberFormatter.formatCurrency(paidOut)}',
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-              ],
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Earned: ${NumberFormatter.formatCurrency(totalUserShare)}',
+                    style: const TextStyle(color: Color(0xFFF1F5F9), fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                  Text(
+                    'Paid: ${NumberFormatter.formatCurrency(paidOut)}',
+                    style: const TextStyle(color: Color(0xFF6EE7B7), fontSize: 12, fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
             ),
             if (isAdmin) ...[
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF0F766E),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        foregroundColor: const Color(0xFF065F46),
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       onPressed: () => _showRecordPaymentDialog(context, provider, adminEmail),
-                      icon: const Icon(Icons.handshake_outlined, size: 18),
+                      icon: const Icon(Iconsax.card_send, size: 18),
                       label: const Text(
                         'Record Payout',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white.withValues(alpha: 0.2),
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: () => Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const PayoutHistoryScreen()),
                     ),
-                    icon: const Icon(Icons.history, size: 18),
-                    label: const Text('History'),
+                    icon: const Icon(Iconsax.clock, size: 16),
+                    label: const Text(
+                      'History',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                    ),
                   ),
                 ],
               ),
@@ -383,17 +563,18 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.white,
-                    side: const BorderSide(color: Colors.white54),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    side: BorderSide(color: Colors.white.withValues(alpha: 0.35)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const PayoutHistoryScreen()),
                   ),
-                  icon: const Icon(Icons.history, size: 18),
+                  icon: const Icon(Iconsax.clock, size: 18),
                   label: const Text(
                     'View Payout History',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
                   ),
                 ),
               ),
@@ -412,23 +593,59 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
           final isSelected = _selectedPeriod == filter;
           return Padding(
             padding: const EdgeInsets.only(right: 8.0),
-            child: FilterChip(
-              avatar: filter == MoneyPeriodFilter.custom
-                  ? Icon(
-                      Icons.calendar_today,
-                      size: 14,
-                      color: isSelected ? Colors.white : Theme.of(context).colorScheme.primary,
-                    )
-                  : null,
-              label: Text(_getPeriodLabel(filter)),
-              selected: isSelected,
-              onSelected: (_) {
+            child: InkWell(
+              onTap: () {
                 if (filter == MoneyPeriodFilter.custom) {
                   _pickCustomDate();
                 } else {
-                  setState(() => _selectedPeriod = filter);
+                  setState(() {
+                    _selectedPeriod = filter;
+                    _customSelectedDate = null;
+                  });
                 }
               },
+              borderRadius: BorderRadius.circular(12),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                decoration: BoxDecoration(
+                  color: isSelected ? const Color(0xFF0284C7) : const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isSelected ? const Color(0xFF0284C7) : const Color(0xFFE2E8F0),
+                  ),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: const Color(0xFF0284C7).withValues(alpha: 0.25),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (filter == MoneyPeriodFilter.custom) ...[
+                      Icon(
+                        Iconsax.calendar_1,
+                        size: 14,
+                        color: isSelected ? Colors.white : const Color(0xFF475569),
+                      ),
+                      const SizedBox(width: 5),
+                    ],
+                    Text(
+                      _getPeriodLabel(filter),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                        color: isSelected ? Colors.white : const Color(0xFF475569),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           );
         }).toList(),
@@ -446,26 +663,28 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
   }) {
     return Column(
       children: [
-        // Revenue & Net Profit Cards
+        // Revenue & Net Profit Cards Row
         Row(
           children: [
             Expanded(
               child: _buildMetricCard(
-                title: 'Total Amount Made',
+                title: 'Total Revenue',
                 value: NumberFormatter.formatCurrency(totalAmountMade),
-                subtitle: 'Gross Customer Revenue',
-                color: Colors.blue.shade700,
-                icon: Icons.payments_outlined,
+                subtitle: 'Gross sales billed',
+                color: const Color(0xFF0284C7),
+                bgColor: const Color(0xFFE0F2FE),
+                icon: Iconsax.wallet_money,
               ),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: _buildMetricCard(
-                title: 'Total Profit',
+                title: 'Total Net Profit',
                 value: NumberFormatter.formatCurrency(totalProfit),
-                subtitle: 'Gross - All Expenses',
-                color: Colors.teal.shade800,
-                icon: Icons.trending_up,
+                subtitle: 'Gross minus expenses',
+                color: const Color(0xFF059669),
+                bgColor: const Color(0xFFECFDF5),
+                icon: Iconsax.trend_up,
                 isHighlight: true,
               ),
             ),
@@ -473,52 +692,61 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
         ),
         const SizedBox(height: 10),
 
-        // My Profit (50% Share) Card
-        Card(
-          elevation: 1.5,
-          color: const Color(0xFFF0FDF4),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-            side: BorderSide(color: Colors.green.shade300),
+        // My Profit (50% Share) Banner Card
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFECFDF5),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFA7F3D0)),
           ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: Colors.green.shade100,
-                  radius: 18,
-                  child: const Icon(Icons.pie_chart_outline, color: Colors.green, size: 20),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF059669),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                const SizedBox(width: 10),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'My Profit (50%)',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                        overflow: TextOverflow.ellipsis,
+                child: const Icon(Iconsax.percentage_circle, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text(
+                      'Your Profit Share (50%)',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                        color: Color(0xFF065F46),
                       ),
-                      Text(
-                        '50% of Total Profit',
-                        style: TextStyle(fontSize: 11, color: Colors.grey),
-                        overflow: TextOverflow.ellipsis,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      'Direct 50% split of shop profit',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF059669),
+                        fontWeight: FontWeight.w500,
                       ),
-                    ],
-                  ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  NumberFormatter.formatCurrency(myProfit),
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green.shade800,
-                  ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                NumberFormatter.formatCurrency(myProfit),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF065F46),
+                  letterSpacing: -0.3,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 10),
@@ -530,17 +758,19 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
               child: _buildSmallExpenseCard(
                 title: 'Paper Cost',
                 value: NumberFormatter.formatCurrency(totalPaperPrice),
-                icon: Icons.description_outlined,
-                color: Colors.amber.shade800,
+                icon: Iconsax.document_text,
+                color: const Color(0xFFD97706),
+                bgColor: const Color(0xFFFEF3C7),
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: _buildSmallExpenseCard(
-                title: 'Toner Price',
+                title: 'Toner Ink',
                 value: NumberFormatter.formatCurrency(totalTonerPrice),
-                icon: Icons.format_color_fill,
-                color: Colors.indigo.shade700,
+                icon: Iconsax.colorfilter,
+                color: const Color(0xFF4F46E5),
+                bgColor: const Color(0xFFEEF2FF),
               ),
             ),
             const SizedBox(width: 8),
@@ -548,8 +778,9 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
               child: _buildSmallExpenseCard(
                 title: 'Service Fee',
                 value: NumberFormatter.formatCurrency(totalServiceFee),
-                icon: Icons.build_circle_outlined,
-                color: Colors.purple.shade700,
+                icon: Iconsax.setting_4,
+                color: const Color(0xFF9333EA),
+                bgColor: const Color(0xFFFAF5FF),
               ),
             ),
           ],
@@ -569,42 +800,50 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF1E3A5F), Color(0xFF2563EB)],
+          colors: [
+            Color(0xFF0F172A),
+            Color(0xFF1E3A8A),
+            Color(0xFF2563EB),
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF2563EB).withValues(alpha: 0.28),
-            blurRadius: 14,
-            offset: const Offset(0, 5),
+            color: const Color(0xFF2563EB).withValues(alpha: 0.25),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.auto_graph, color: Colors.white70, size: 17),
+              const Icon(Iconsax.status_up, color: Colors.white, size: 18),
               const SizedBox(width: 8),
               const Expanded(
                 child: Text(
-                  'Expected Profit (Your 50% Share)',
-                  style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
+                  'Expected Profit Projections',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
+                  color: Colors.white.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Text(
-                  'Forecast',
-                  style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
+                  '50% Share',
+                  style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800),
                 ),
               ),
             ],
@@ -612,9 +851,9 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
           const SizedBox(height: 6),
           Text(
             hasData
-                ? 'Based on ${NumberFormatter.format(activeDays)} active day${activeDays == 1 ? '' : 's'} — avg ${NumberFormatter.formatCurrency(avgDaily)} net/day'
+                ? 'Based on ${NumberFormatter.format(activeDays)} active day${activeDays == 1 ? '' : 's'} · avg ${NumberFormatter.formatCurrency(avgDaily)} net/day'
                 : 'Add records to see profit projections',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11),
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 11),
           ),
           const SizedBox(height: 14),
           LayoutBuilder(
@@ -623,21 +862,21 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
               if (isSmall) {
                 return Column(
                   children: [
-                    _buildProjTile('Per Day', daily, Icons.wb_sunny_outlined, const Color(0xFF60A5FA), isRow: true),
+                    _buildProjTile('Daily', daily, Iconsax.sun_1, const Color(0xFF60A5FA), isRow: true),
                     const SizedBox(height: 8),
-                    _buildProjTile('Per Week', weekly, Icons.date_range_outlined, const Color(0xFF34D399), isRow: true),
+                    _buildProjTile('Weekly', weekly, Iconsax.calendar_tick, const Color(0xFF34D399), isRow: true),
                     const SizedBox(height: 8),
-                    _buildProjTile('Per Month', monthly, Icons.calendar_month_outlined, const Color(0xFFFBBF24), isRow: true),
+                    _buildProjTile('Monthly', monthly, Iconsax.calendar_2, const Color(0xFFFBBF24), isRow: true),
                   ],
                 );
               }
               return Row(
                 children: [
-                  Expanded(child: _buildProjTile('Per Day', daily, Icons.wb_sunny_outlined, const Color(0xFF60A5FA))),
+                  Expanded(child: _buildProjTile('Daily', daily, Iconsax.sun_1, const Color(0xFF60A5FA))),
                   const SizedBox(width: 8),
-                  Expanded(child: _buildProjTile('Per Week', weekly, Icons.date_range_outlined, const Color(0xFF34D399))),
+                  Expanded(child: _buildProjTile('Weekly', weekly, Iconsax.calendar_tick, const Color(0xFF34D399))),
                   const SizedBox(width: 8),
-                  Expanded(child: _buildProjTile('Per Month', monthly, Icons.calendar_month_outlined, const Color(0xFFFBBF24))),
+                  Expanded(child: _buildProjTile('Monthly', monthly, Iconsax.calendar_2, const Color(0xFFFBBF24))),
                 ],
               );
             },
@@ -650,10 +889,10 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
   Widget _buildProjTile(String period, double amount, IconData icon, Color accent, {bool isRow = false}) {
     if (isRow) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
         ),
         child: Row(
@@ -662,7 +901,7 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
             const SizedBox(width: 8),
             Text(
               period,
-              style: TextStyle(color: accent, fontSize: 13, fontWeight: FontWeight.w700),
+              style: TextStyle(color: accent, fontSize: 13, fontWeight: FontWeight.w800),
             ),
             const Spacer(),
             Column(
@@ -670,7 +909,7 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
               children: [
                 Text(
                   NumberFormatter.formatCurrency(amount),
-                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w900),
                 ),
                 Text(
                   'your share',
@@ -684,10 +923,10 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
       ),
       child: Column(
@@ -695,14 +934,14 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
         children: [
           Row(
             children: [
-              Icon(icon, size: 13, color: accent),
-              const SizedBox(width: 4),
+              Icon(icon, size: 14, color: accent),
+              const SizedBox(width: 5),
               Flexible(
                 child: Text(
                   period,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: accent, fontSize: 10, fontWeight: FontWeight.w700),
+                  style: TextStyle(color: accent, fontSize: 11, fontWeight: FontWeight.w800),
                 ),
               ),
             ],
@@ -713,12 +952,12 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
             alignment: Alignment.centerLeft,
             child: Text(
               NumberFormatter.formatCurrency(amount),
-              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+              style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w900),
             ),
           ),
           Text(
             'your share',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 9),
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 9.5),
           ),
         ],
       ),
@@ -730,49 +969,74 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
     required String value,
     required String subtitle,
     required Color color,
+    required Color bgColor,
     required IconData icon,
     bool isHighlight = false,
   }) {
-    return Card(
-      elevation: isHighlight ? 2 : 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[700], fontWeight: FontWeight.w600),
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, size: 16, color: color),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF64748B),
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(width: 4),
-                Icon(icon, size: 18, color: color),
-              ],
-            ),
-            const SizedBox(height: 6),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                value,
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: color),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                color: isHighlight ? const Color(0xFF059669) : const Color(0xFF0F172A),
+                letterSpacing: -0.3,
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 10, color: Colors.grey[500]),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            subtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8), fontWeight: FontWeight.w500),
+          ),
+        ],
       ),
     );
   }
@@ -782,28 +1046,52 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
     required String value,
     required IconData icon,
     required Color color,
+    required Color bgColor,
   }) {
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(height: 6),
-            Text(
-              title,
-              style: TextStyle(fontSize: 11, color: Colors.grey[600], fontWeight: FontWeight.w500),
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(8),
             ),
-            const SizedBox(height: 2),
-            Text(
+            child: Icon(icon, size: 15, color: color),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
               value,
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -818,15 +1106,22 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
     final double orderProfit = revenue - totalCost;
     final double userShare = orderProfit * 0.50;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      elevation: 0.8,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade200),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12.0),
+        padding: const EdgeInsets.all(14.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -836,21 +1131,31 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
                 Expanded(
                   child: Text(
                     record.customerName,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFF0F172A)),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 Text(
                   NumberFormatter.formatCurrency(revenue),
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.blue),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 14,
+                    color: Color(0xFF0284C7),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 3),
             Text(
               '${record.jobDescription} • ${NumberFormatter.format(pages)} pages • ${DateFormat('dd MMM, hh:mm a').format(record.timestamp)}',
-              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+              style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            const Divider(height: 16),
+            const SizedBox(height: 10),
+            Container(height: 1, color: const Color(0xFFF1F5F9)),
+            const SizedBox(height: 10),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -874,20 +1179,23 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
   }
 
   Widget _buildOrderMiniStat(String label, String value, {bool isProfit = false, bool isShare = false}) {
-    Color valColor = Colors.black87;
-    if (isProfit) valColor = Colors.teal.shade800;
-    if (isShare) valColor = Colors.green.shade800;
+    Color valColor = const Color(0xFF334155);
+    if (isProfit) valColor = const Color(0xFF0284C7);
+    if (isShare) valColor = const Color(0xFF059669);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: 10, color: Colors.grey[600])),
-        const SizedBox(height: 1),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 2),
         Text(
           value,
           style: TextStyle(
-            fontSize: 11,
-            fontWeight: (isProfit || isShare) ? FontWeight.bold : FontWeight.w500,
+            fontSize: 11.5,
+            fontWeight: (isProfit || isShare) ? FontWeight.w800 : FontWeight.w600,
             color: valColor,
           ),
         ),
@@ -896,24 +1204,39 @@ class _MoneyRecordsScreenState extends State<MoneyRecordsScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Card(
-      elevation: 0,
-      color: Colors.grey[100],
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(28.0),
-        child: Column(
-          children: [
-            Icon(Icons.monetization_on_outlined, size: 40, color: Colors.grey[400]),
-            const SizedBox(height: 8),
-            const Text('No records for this period', style: TextStyle(fontWeight: FontWeight.w600)),
-            const SizedBox(height: 4),
-            Text(
-              'Select another period filter or record a sale in POS.',
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF1F5F9),
+              shape: BoxShape.circle,
             ),
-          ],
-        ),
+            child: const Icon(
+              Iconsax.wallet_check,
+              size: 36,
+              color: Color(0xFF94A3B8),
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'No financial records for this period',
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF1E293B)),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Select another period filter or record a sale in POS.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+          ),
+        ],
       ),
     );
   }

@@ -85,52 +85,15 @@ class DashboardScreen extends StatelessWidget {
           ],
         ),
         actions: [
-          // Manual sync button with modern container
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: IconButton(
-              tooltip: 'Sync with Cloud',
-              icon: const Icon(Iconsax.refresh, size: 20, color: Color(0xFF475569)),
-              constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
-              padding: EdgeInsets.zero,
-              onPressed: () async {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Syncing records to Cloud Firestore...'),
-                    duration: Duration(seconds: 1),
-                  ),
-                );
-                final count = await SyncService().syncLocalRecordsToCloud();
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Synced $count records to Firestore!'),
-                      backgroundColor: const Color(0xFF059669),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  );
-                }
-              },
-            ),
-          ),
-          const SizedBox(width: 8),
-          // User role avatar & menu
+          // User role avatar & modern dropdown menu
           PopupMenuButton<String>(
-            offset: const Offset(0, 48),
+            offset: const Offset(0, 52),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(20),
               side: const BorderSide(color: Color(0xFFE2E8F0)),
             ),
-            elevation: 8,
-            shadowColor: Colors.black.withValues(alpha: 0.1),
+            elevation: 12,
+            shadowColor: const Color(0xFF0F172A).withValues(alpha: 0.12),
             icon: Container(
               padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
@@ -140,9 +103,19 @@ class DashboardScreen extends StatelessWidget {
                       ? [const Color(0xFF0284C7), const Color(0xFF0369A1)]
                       : [const Color(0xFF10B981), const Color(0xFF059669)],
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: (user?.isAdmin == true
+                            ? const Color(0xFF0284C7)
+                            : const Color(0xFF10B981))
+                        .withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: CircleAvatar(
-                radius: 15,
+                radius: 16,
                 backgroundColor: Colors.white,
                 child: Text(
                   user?.email.isNotEmpty == true
@@ -159,73 +132,183 @@ class DashboardScreen extends StatelessWidget {
               ),
             ),
             itemBuilder: (ctx) => [
+              // User Profile Header Info
               PopupMenuItem(
                 enabled: false,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: Row(
                   children: [
-                    Text(
-                      user?.email ?? 'User',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0F172A),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: user?.isAdmin == true
                             ? const Color(0xFFE0F2FE)
                             : const Color(0xFFECFDF5),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Text(
-                        user?.isAdmin == true ? 'Administrator' : 'Standard User',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: user?.isAdmin == true
-                              ? const Color(0xFF0284C7)
-                              : const Color(0xFF059669),
-                          fontWeight: FontWeight.w700,
-                        ),
+                      child: Icon(
+                        user?.isAdmin == true ? Iconsax.security_user : Iconsax.user,
+                        size: 20,
+                        color: user?.isAdmin == true
+                            ? const Color(0xFF0284C7)
+                            : const Color(0xFF059669),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            user?.email ?? 'User',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF0F172A),
+                              fontSize: 13,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            user?.isAdmin == true ? 'Administrator' : 'Standard User',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: user?.isAdmin == true
+                                  ? const Color(0xFF0284C7)
+                                  : const Color(0xFF059669),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
-              const PopupMenuDivider(),
+              const PopupMenuDivider(height: 1),
+
+              // Sync with Cloud
+              PopupMenuItem(
+                value: 'sync',
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE0F2FE),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Iconsax.refresh,
+                        size: 16,
+                        color: Color(0xFF0284C7),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            'Sync Cloud Records',
+                            style: TextStyle(
+                              color: Color(0xFF1E293B),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                          Text(
+                            'Upload local pending data',
+                            style: TextStyle(
+                              color: Color(0xFF94A3B8),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
               if (user?.isAdmin == true) ...[
+                const PopupMenuDivider(height: 1),
+                // Configure App
                 PopupMenuItem(
                   value: 'configure',
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Row(
-                    children: const [
-                      Icon(Iconsax.setting_2, size: 18, color: Color(0xFF0284C7)),
-                      SizedBox(width: 10),
-                      Text(
-                        'Configure App',
-                        style: TextStyle(
-                          color: Color(0xFF0284C7),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Iconsax.setting_2,
+                          size: 16,
+                          color: Color(0xFF475569),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              'App Configuration',
+                              style: TextStyle(
+                                color: Color(0xFF1E293B),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                            Text(
+                              'Pricing, paper & user rules',
+                              style: TextStyle(
+                                color: Color(0xFF94A3B8),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-                const PopupMenuDivider(),
               ],
+
+              const PopupMenuDivider(height: 1),
+
+              // Logout
               PopupMenuItem(
                 value: 'logout',
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(
-                  children: const [
-                    Icon(Iconsax.logout, size: 18, color: Color(0xFFEF4444)),
-                    SizedBox(width: 10),
-                    Text(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEE2E2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Iconsax.logout,
+                        size: 16,
+                        color: Color(0xFFEF4444),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
                       'Logout',
                       style: TextStyle(
                         color: Color(0xFFEF4444),
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                         fontSize: 13,
                       ),
                     ),
@@ -233,8 +316,32 @@ class DashboardScreen extends StatelessWidget {
                 ),
               ),
             ],
-            onSelected: (val) {
-              if (val == 'configure') {
+            onSelected: (val) async {
+              if (val == 'sync') {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Syncing records to Cloud Firestore...'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+                final count = await SyncService().syncLocalRecordsToCloud();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        count > 0
+                            ? 'Synced $count records to Firestore!'
+                            : 'All records already synced.',
+                      ),
+                      backgroundColor: const Color(0xFF059669),
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  );
+                }
+              } else if (val == 'configure') {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -252,7 +359,7 @@ class DashboardScreen extends StatelessWidget {
               }
             },
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
         ],
       ),
       body: Consumer<RecordProvider>(

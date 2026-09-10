@@ -61,22 +61,33 @@ class RecordProvider with ChangeNotifier {
   }
 
   Future<void> addRecord(PrintingRecord record) async {
-    // 1. Save to local database first (isSynced=false by default)
+    // 1. Save to local SQLite database immediately (isSynced=false by default)
     final id = await _dbHelper.insertRecord(record);
     final savedRecord = record.copyWith(id: id, isSynced: false);
 
-    // 2. Auto-decrement the paper stock by pages used in this print job
+    // 2. Auto-decrement local paper stock immediately in local state & SQLite
     final newStock = (_config.papersStock - record.quantity).clamp(0, 9999999);
     final updatedConfig = _config.copyWith(
       papersStock: newStock,
       updatedAt: DateTime.now(),
     );
-    await updateConfig(updatedConfig); // persists locally + syncs to Firestore
+    _config = updatedConfig;
+    await _dbHelper.saveAppConfig(updatedConfig);
+    notifyListeners();
 
+    // 3. Immediately refresh in-memory records so POS & Dashboard update with 0 lag
     await fetchRecords();
 
-    // 3. Sync to Cloud Firestore in background, then refresh to show synced status
-    _syncService.syncSingleRecord(savedRecord).then((_) => fetchRecords());
+    // 4. Fire-and-forget sync to Cloud Firestore in background (non-blocking for offline)
+    Future(() async {
+      try {
+        await _syncService.saveConfig(updatedConfig);
+      } catch (_) {}
+      try {
+        await _syncService.syncSingleRecord(savedRecord);
+        await fetchRecords();
+      } catch (_) {}
+    });
   }
 
   Future<void> updateRecord(PrintingRecord record) async {
