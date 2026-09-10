@@ -22,7 +22,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'printing_records.db');
     return await openDatabase(
       path,
-      version: 7,
+      version: 9,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -32,6 +32,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        firestoreId TEXT UNIQUE,
         customerName TEXT,
         jobDescription TEXT,
         quantity INTEGER,
@@ -72,6 +73,15 @@ class DatabaseHelper {
         cumulativePaidAtTime REAL DEFAULT 0,
         balanceAfterPayout REAL DEFAULT 0,
         isSynced INTEGER DEFAULT 0
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS security_settings (
+        id INTEGER PRIMARY KEY DEFAULT 1,
+        pinHash TEXT,
+        isAppLockEnabled INTEGER DEFAULT 0,
+        isBiometricEnabled INTEGER DEFAULT 0
       )
     ''');
   }
@@ -136,7 +146,68 @@ class DatabaseHelper {
         ''');
       } catch (_) {}
     }
+    if (oldVersion < 8) {
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS security_settings (
+            id INTEGER PRIMARY KEY DEFAULT 1,
+            pinHash TEXT,
+            isAppLockEnabled INTEGER DEFAULT 0,
+            isBiometricEnabled INTEGER DEFAULT 0
+          )
+        ''');
+      } catch (_) {}
+    }
+    if (oldVersion < 9) {
+      try {
+        await db.execute(
+            "ALTER TABLE records ADD COLUMN firestoreId TEXT;");
+        // Create a unique index to prevent duplicates going forward
+        await db.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_records_firestoreId ON records (firestoreId) WHERE firestoreId IS NOT NULL;");
+      } catch (_) {}
+    }
   }
+
+  Future<Map<String, dynamic>?> getSecuritySettings() async {
+      Database db = await database;
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS security_settings (
+          id INTEGER PRIMARY KEY DEFAULT 1,
+          pinHash TEXT,
+          isAppLockEnabled INTEGER DEFAULT 0,
+          isBiometricEnabled INTEGER DEFAULT 0
+        )
+      ''');
+      final maps = await db.query('security_settings', where: 'id = ?', whereArgs: [1], limit: 1);
+      if (maps.isNotEmpty) return maps.first;
+      return null;
+    }
+
+    Future<void> saveSecuritySettings({
+      String? pinHash,
+      bool? isAppLockEnabled,
+      bool? isBiometricEnabled,
+    }) async {
+      Database db = await database;
+      final existing = await getSecuritySettings();
+      final values = <String, dynamic>{
+        'id': 1,
+        'pinHash': pinHash ?? existing?['pinHash'],
+        'isAppLockEnabled': isAppLockEnabled != null
+            ? (isAppLockEnabled ? 1 : 0)
+            : (existing?['isAppLockEnabled'] ?? 0),
+        'isBiometricEnabled': isBiometricEnabled != null
+            ? (isBiometricEnabled ? 1 : 0)
+            : (existing?['isBiometricEnabled'] ?? 0),
+      };
+      await db.insert('security_settings', values, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+
+    Future<void> clearSecuritySettings() async {
+      Database db = await database;
+      await db.delete('security_settings', where: 'id = ?', whereArgs: [1]);
+    }
 
   Future<void> saveAppConfig(AppConfig config) async {
     Database db = await database;
@@ -187,8 +258,20 @@ class DatabaseHelper {
     );
   }
 
+  /// Inserts a record only if no row with the same firestoreId exists.
+  /// Falls back to a normal insert (no-op on conflict) for cloud-sourced records.
+  /// Returns the new row id, or -1 if a duplicate was skipped.
   Future<int> insertRecord(PrintingRecord record) async {
     Database db = await database;
+    if (record.firestoreId != null) {
+      // Cloud-sourced: use IGNORE conflict strategy to prevent duplicates
+      return await db.insert(
+        'records',
+        record.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+    }
+    // Locally created record: normal insert (no firestoreId yet)
     return await db.insert('records', record.toMap());
   }
 

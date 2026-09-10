@@ -127,6 +127,16 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthService>(context);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final fieldFillColor = isDark
+        ? colorScheme.surfaceContainerHighest
+        : const Color(0xFFF8FAFC);
+    final fieldBorderColor = isDark
+        ? colorScheme.outline.withValues(alpha: 0.75)
+        : const Color(0xFFE2E8F0);
+    final hintColor = colorScheme.onSurfaceVariant.withValues(alpha: 0.72);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -287,44 +297,37 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 decoration: InputDecoration(
                                   hintText: 'user1@gmail.com',
-                                  hintStyle: TextStyle(
-                                    color: Colors.grey.shade400,
-                                    fontSize: 14,
-                                  ),
-                                  prefixIcon: const Icon(
+                                  hintStyle: TextStyle(color: hintColor, fontSize: 14),
+                                  prefixIcon: Icon(
                                     Iconsax.sms,
                                     size: 20,
-                                    color: Color(0xFF0284C7),
+                                    color: colorScheme.primary,
                                   ),
                                   contentPadding: const EdgeInsets.symmetric(
                                     horizontal: 16,
                                     vertical: 16,
                                   ),
                                   filled: true,
-                                  fillColor: const Color(0xFFF8FAFC),
+                                  fillColor: fieldFillColor,
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(14),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFFE2E8F0),
-                                    ),
+                                    borderSide: BorderSide(color: fieldBorderColor),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(14),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFF0284C7),
+                                    borderSide: BorderSide(
+                                      color: colorScheme.primary,
                                       width: 1.8,
                                     ),
                                   ),
                                   errorBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(14),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFFE11D48),
-                                    ),
+                                    borderSide: BorderSide(color: colorScheme.error),
                                   ),
                                   focusedErrorBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(14),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFFE11D48),
+                                    borderSide: BorderSide(
+                                      color: colorScheme.error,
                                       width: 1.8,
                                     ),
                                   ),
@@ -365,14 +368,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 decoration: InputDecoration(
                                   hintText: '••••••••',
-                                  hintStyle: TextStyle(
-                                    color: Colors.grey.shade400,
-                                    fontSize: 14,
-                                  ),
-                                  prefixIcon: const Icon(
+                                  hintStyle: TextStyle(color: hintColor, fontSize: 14),
+                                  prefixIcon: Icon(
                                     Iconsax.lock,
                                     size: 20,
-                                    color: Color(0xFF0284C7),
+                                    color: colorScheme.primary,
                                   ),
                                   suffixIcon: IconButton(
                                     icon: Icon(
@@ -380,7 +380,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                           ? Iconsax.eye_slash
                                           : Iconsax.eye,
                                       size: 20,
-                                      color: Colors.grey.shade500,
+                                      color: colorScheme.onSurfaceVariant,
                                     ),
                                     onPressed: () => setState(
                                       () =>
@@ -392,30 +392,26 @@ class _LoginScreenState extends State<LoginScreen> {
                                     vertical: 16,
                                   ),
                                   filled: true,
-                                  fillColor: const Color(0xFFF8FAFC),
+                                  fillColor: fieldFillColor,
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(14),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFFE2E8F0),
-                                    ),
+                                    borderSide: BorderSide(color: fieldBorderColor),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(14),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFF0284C7),
+                                    borderSide: BorderSide(
+                                      color: colorScheme.primary,
                                       width: 1.8,
                                     ),
                                   ),
                                   errorBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(14),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFFE11D48),
-                                    ),
+                                    borderSide: BorderSide(color: colorScheme.error),
                                   ),
                                   focusedErrorBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(14),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFFE11D48),
+                                    borderSide: BorderSide(
+                                      color: colorScheme.error,
                                       width: 1.8,
                                     ),
                                   ),

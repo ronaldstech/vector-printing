@@ -1,5 +1,8 @@
 class PrintingRecord {
   final int? id;
+  /// The Firestore document ID — globally unique across all devices.
+  /// Used as the single source of truth for cross-device deduplication.
+  final String? firestoreId;
   final String customerName;
   final String jobDescription;
   final int quantity;
@@ -16,6 +19,7 @@ class PrintingRecord {
 
   PrintingRecord({
     this.id,
+    this.firestoreId,
     required this.customerName,
     required this.jobDescription,
     required this.quantity,
@@ -34,6 +38,7 @@ class PrintingRecord {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'firestoreId': firestoreId,
       'customerName': customerName,
       'jobDescription': jobDescription,
       'quantity': quantity,
@@ -53,6 +58,7 @@ class PrintingRecord {
   factory PrintingRecord.fromMap(Map<String, dynamic> map) {
     return PrintingRecord(
       id: map['id'],
+      firestoreId: map['firestoreId'],
       customerName: map['customerName'] ?? 'Walk-in Customer',
       jobDescription: map['jobDescription'] ?? '',
       quantity: map['quantity'] ?? 1,
@@ -71,6 +77,7 @@ class PrintingRecord {
 
   PrintingRecord copyWith({
     int? id,
+    String? firestoreId,
     String? customerName,
     String? jobDescription,
     int? quantity,
@@ -87,6 +94,7 @@ class PrintingRecord {
   }) {
     return PrintingRecord(
       id: id ?? this.id,
+      firestoreId: firestoreId ?? this.firestoreId,
       customerName: customerName ?? this.customerName,
       jobDescription: jobDescription ?? this.jobDescription,
       quantity: quantity ?? this.quantity,

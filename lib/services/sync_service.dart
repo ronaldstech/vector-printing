@@ -24,6 +24,9 @@ class SyncService with ChangeNotifier {
   bool _isSyncing = false;
   bool get isSyncing => _isSyncing;
 
+  // Prevents concurrent realtime-listener inserts from racing with syncFromCloud
+  bool _isImporting = false;
+
   /// Registers a callback to be notified whenever records are automatically synced in
   void registerOnRecordsChanged(VoidCallback callback) {
     _onRecordsChangedCallback = callback;
@@ -52,15 +55,21 @@ class SyncService with ChangeNotifier {
           .snapshots()
           .listen(
         (snapshot) async {
+          // Skip if a bulk import is already running to avoid concurrent inserts
+          if (_isImporting) return;
+
           bool anyNewOrUpdated = false;
           final localRecords = await _dbHelper.getRecords();
-          final localMap = {
-            for (var r in localRecords) r.timestamp.toIso8601String(): r
-          };
+          // Build dedup map keyed by firestoreId (preferred) with timestamp fallback
+          final localFirestoreIds = <String>{};
+          for (final r in localRecords) {
+            if (r.firestoreId != null) localFirestoreIds.add(r.firestoreId!);
+          }
 
           for (final docChange in snapshot.docChanges) {
             final data = docChange.doc.data();
             if (data == null) continue;
+            final docId = docChange.doc.id;
 
             final rawTimestamp = data['timestamp'];
             if (rawTimestamp == null) continue;
@@ -69,12 +78,13 @@ class SyncService with ChangeNotifier {
             try {
               final DateTime recordTime = DateTime.parse(timestampStr);
 
-              // Check if we already have this record locally
-              final existingLocal = localMap[timestampStr];
+              if (docChange.type == DocumentChangeType.added) {
+                // Skip if we already have this Firestore doc locally
+                if (localFirestoreIds.contains(docId)) continue;
 
-              if (existingLocal == null) {
                 // New record added on another device -> insert locally
                 final newRecord = PrintingRecord(
+                  firestoreId: docId,
                   customerName: data['customerName'] ?? 'Walk-in Customer',
                   jobDescription: data['jobDescription'] ?? '',
                   quantity: (data['quantity'] as num?)?.toInt() ?? 1,
@@ -89,14 +99,25 @@ class SyncService with ChangeNotifier {
                   isSynced: true,
                   createdBy: data['createdBy']?.toString(),
                 );
-                await _dbHelper.insertRecord(newRecord);
-                localMap[timestampStr] = newRecord;
-                anyNewOrUpdated = true;
-                debugPrint('Real-time auto-sync: Imported new record for ${newRecord.customerName}');
+                final insertedId = await _dbHelper.insertRecord(newRecord);
+                if (insertedId > 0) {
+                  // -1 means duplicate was silently ignored
+                  localFirestoreIds.add(docId);
+                  anyNewOrUpdated = true;
+                  debugPrint('Real-time auto-sync: Imported $docId for ${newRecord.customerName}');
+                } else {
+                  debugPrint('Real-time auto-sync: Skipped duplicate $docId');
+                }
               } else if (docChange.type == DocumentChangeType.modified) {
-                // Modified on cloud -> update local
+                // Find the local record with this firestoreId
+                final existingLocal = localRecords
+                    .where((r) => r.firestoreId == docId)
+                    .firstOrNull;
+                if (existingLocal == null) continue;
+
                 final updatedRecord = PrintingRecord(
                   id: existingLocal.id,
+                  firestoreId: docId,
                   customerName: data['customerName'] ?? existingLocal.customerName,
                   jobDescription: data['jobDescription'] ?? existingLocal.jobDescription,
                   quantity: (data['quantity'] as num?)?.toInt() ?? existingLocal.quantity,
@@ -113,7 +134,7 @@ class SyncService with ChangeNotifier {
                 );
                 await _dbHelper.updateRecord(updatedRecord);
                 anyNewOrUpdated = true;
-                debugPrint('Real-time auto-sync: Updated record id ${existingLocal.id}');
+                debugPrint('Real-time auto-sync: Updated $docId');
               }
             } catch (e) {
               debugPrint('Error parsing real-time record change: $e');
@@ -337,15 +358,20 @@ class SyncService with ChangeNotifier {
       }
 
       final batch = firestore.batch();
+      // Track docId <-> record mapping so we can write firestoreId back after commit
+      final docIdMap = <String, PrintingRecord>{};
 
       for (var record in unsyncedRecords) {
-        final docId = 'record_${record.id ?? record.timestamp.millisecondsSinceEpoch}';
+        final docId = record.firestoreId ??
+            'record_${record.id ?? record.timestamp.millisecondsSinceEpoch}';
+        docIdMap[docId] = record;
         final docRef = firestore.collection('printing_records').doc(docId);
 
         batch.set(
           docRef,
           {
             ...record.toMap(),
+            'firestoreId': docId,
             'isSynced': 1,
             'syncedAt': FieldValue.serverTimestamp(),
           },
@@ -355,9 +381,10 @@ class SyncService with ChangeNotifier {
 
       await batch.commit();
 
-      // Mark records as synced in local SQLite
-      for (var record in unsyncedRecords) {
-        await _dbHelper.updateRecord(record.copyWith(isSynced: true));
+      // Write firestoreId + synced flag back to local SQLite
+      for (final entry in docIdMap.entries) {
+        await _dbHelper.updateRecord(
+            entry.value.copyWith(isSynced: true, firestoreId: entry.key));
         syncedCount++;
       }
       debugPrint('Successfully synced $syncedCount records to Firestore!');
@@ -370,23 +397,30 @@ class SyncService with ChangeNotifier {
     return syncedCount;
   }
 
-  /// Syncs an individual newly created record to Firestore and marks local SQLite
+  /// Syncs an individual newly created record to Firestore and stores
+  /// the Firestore doc ID back into the local SQLite record.
   Future<bool> syncSingleRecord(PrintingRecord record) async {
     final firestore = _getFirestoreInstance();
     if (firestore == null) return false;
 
     try {
-      final docId = 'record_${record.id ?? record.timestamp.millisecondsSinceEpoch}';
+      // Deterministic doc ID: prefer existing firestoreId, otherwise generate
+      // one from the local SQLite id (guaranteed unique per device)
+      final docId = record.firestoreId ??
+          'record_${record.id ?? record.timestamp.millisecondsSinceEpoch}';
       await firestore.collection('printing_records').doc(docId).set(
         {
           ...record.toMap(),
+          'firestoreId': docId, // store in Firestore so syncing devices can read it
           'isSynced': 1,
           'syncedAt': FieldValue.serverTimestamp(),
         },
         SetOptions(merge: true),
       );
       if (record.id != null) {
-        await _dbHelper.updateRecord(record.copyWith(isSynced: true));
+        // Write the firestoreId back to local SQLite so dedup works from now on
+        await _dbHelper.updateRecord(
+            record.copyWith(isSynced: true, firestoreId: docId));
       }
       debugPrint('Single record synced to Firestore: $docId');
       return true;
@@ -406,18 +440,19 @@ class SyncService with ChangeNotifier {
       return 0;
     }
 
-    if (_isSyncing) return 0;
+    if (_isSyncing || _isImporting) return 0;
     _isSyncing = true;
+    _isImporting = true;
     notifyListeners();
 
     int importedCount = 0;
     try {
-      // 1. Load all existing local records to build a deduplication set
+      // 1. Load existing local firestoreIds for O(1) dedup lookups
       final localRecords = await _dbHelper.getRecords();
-      // Use timestamp string as a unique key for deduplication
-      final localTimestamps = localRecords
-          .map((r) => r.timestamp.toIso8601String())
-          .toSet();
+      final localFirestoreIds = <String>{};
+      for (final r in localRecords) {
+        if (r.firestoreId != null) localFirestoreIds.add(r.firestoreId!);
+      }
 
       // 2. Fetch all records from Firestore
       final snapshot = await firestore.collection('printing_records').get();
@@ -425,17 +460,18 @@ class SyncService with ChangeNotifier {
 
       for (final doc in snapshot.docs) {
         final data = doc.data();
+        final docId = doc.id;
         try {
-          // Parse the timestamp from the document
+          // Skip if we already have this Firestore doc locally
+          if (localFirestoreIds.contains(docId)) continue;
+
           final rawTimestamp = data['timestamp'];
           if (rawTimestamp == null) continue;
           final timestampStr = rawTimestamp.toString();
 
-          // Skip if this timestamp already exists locally (record already there)
-          if (localTimestamps.contains(timestampStr)) continue;
-
           // Build the local record (isSynced=true since it came from cloud)
           final record = PrintingRecord(
+            firestoreId: docId,
             customerName: data['customerName'] ?? 'Walk-in Customer',
             jobDescription: data['jobDescription'] ?? '',
             quantity: (data['quantity'] as num?)?.toInt() ?? 1,
@@ -451,11 +487,13 @@ class SyncService with ChangeNotifier {
             createdBy: data['createdBy']?.toString(),
           );
 
-          await _dbHelper.insertRecord(record);
-          localTimestamps.add(timestampStr); // prevent duplicate inserts within same batch
-          importedCount++;
+          final insertedId = await _dbHelper.insertRecord(record);
+          if (insertedId > 0) {
+            localFirestoreIds.add(docId);
+            importedCount++;
+          }
         } catch (e) {
-          debugPrint('syncFromCloud: error importing doc ${doc.id}: $e');
+          debugPrint('syncFromCloud: error importing doc $docId: $e');
         }
       }
 
@@ -464,6 +502,7 @@ class SyncService with ChangeNotifier {
       debugPrint('syncFromCloud error: $e');
     } finally {
       _isSyncing = false;
+      _isImporting = false;
       notifyListeners();
     }
     return importedCount;
