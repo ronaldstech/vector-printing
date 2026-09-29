@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../models/record_model.dart';
 import '../models/app_config_model.dart';
@@ -9,6 +11,11 @@ class RecordProvider with ChangeNotifier {
   List<PrintingRecord> _records = [];
   List<PayoutRecord> _payoutRecords = [];
   AppConfig _config = AppConfig(updatedAt: DateTime.now());
+  /// Queued local changes awaiting the cloud, covering both unsynced records
+  /// and tombstones.  Counted in SQLite rather than derived from `_records`,
+  /// because a queued deletion no longer has a row in `_records` and would
+  /// otherwise be invisible to the sync indicator.
+  int _pendingSyncCount = 0;
   final DatabaseHelper _dbHelper = DatabaseHelper();
   final SyncService _syncService = SyncService();
 
@@ -57,13 +64,22 @@ class RecordProvider with ChangeNotifier {
 
   Future<void> fetchRecords() async {
     _records = await _dbHelper.getRecords();
+    _pendingSyncCount = await _dbHelper.countPendingSyncs();
     notifyListeners();
   }
 
   Future<void> addRecord(PrintingRecord record) async {
     // 1. Save to local SQLite database immediately (isSynced=false by default)
-    final id = await _dbHelper.insertRecord(record);
-    final savedRecord = record.copyWith(id: id, isSynced: false);
+    // updatedAt is stamped now rather than reusing `timestamp` so the conflict
+    // comparison reflects when the row was last written, not when the order
+    // was originally created.
+    final recordWithCloudId = record.firestoreId == null
+        ? record.copyWith(
+            firestoreId: _syncService.createRecordId(),
+            updatedAt: DateTime.now().toUtc())
+        : record.copyWith(updatedAt: DateTime.now().toUtc());
+    final id = await _dbHelper.insertRecord(recordWithCloudId);
+    final savedRecord = recordWithCloudId.copyWith(id: id, isSynced: false);
 
     // 2. Auto-decrement local paper stock immediately in local state & SQLite
     final newStock = (_config.papersStock - record.quantity).clamp(0, 9999999);
@@ -92,16 +108,48 @@ class RecordProvider with ChangeNotifier {
 
   Future<void> updateRecord(PrintingRecord record) async {
     // 1. Update local database first, mark as unsynced until confirmed
-    await _dbHelper.updateRecord(record.copyWith(isSynced: false));
+    final edited = record.copyWith(
+        isSynced: false, updatedAt: DateTime.now().toUtc());
+    await _dbHelper.updateRecord(edited);
     await fetchRecords();
 
     // 2. Sync updated record to Firestore, then refresh
-    _syncService.syncSingleRecord(record).then((_) => fetchRecords());
+    unawaited(_syncService.syncSingleRecord(edited).then((_) => fetchRecords()));
   }
 
   Future<void> deleteRecord(int id) async {
+    final record = await _dbHelper.getRecord(id);
+    if (record == null) return;
+
+    // A record created before client-minted ids have no stored firestoreId, but
+    // older builds named its cloud document after the local SQLite id.  That
+    // name is reconstructed so the cloud copy can still be tombstoned instead
+    // of surviving forever.
+    final cloudId =
+        record.firestoreId ?? _legacyCloudIdFor(record);
+
+    // The marker is written before the visible row is removed, so a phone that
+    // is offline still knows this order must be deleted on the next sync.
+    if (cloudId != null) {
+      await _dbHelper.markRecordDeleted(cloudId,
+          needsVerify: record.firestoreId == null);
+    }
     await _dbHelper.deleteRecord(id);
     await fetchRecords();
+
+    if (cloudId != null) {
+      // Do not block the UI; an offline failure stays queued in SQLite and the
+      // retry loop flushes it once Firestore is reachable again.
+      unawaited(_syncService.syncDeletedRecord(cloudId,
+          onlyIfExists: record.firestoreId == null));
+    }
+  }
+
+  /// Cloud document name used by builds that predate client-generated ids.
+  String? _legacyCloudIdFor(PrintingRecord record) {
+    if (!record.isSynced) return null; // never reached the cloud, nothing to remove
+    if (record.id == null) return null;
+    return 'record_${record.id}';
   }
 
   double get totalSales {
@@ -215,9 +263,7 @@ class RecordProvider with ChangeNotifier {
   }
 
   // Pending sync records (records not yet successfully pushed to Firestore)
-  int get pendingSyncRecordsCount {
-    return _records.where((r) => !r.isSynced).length;
-  }
+  int get pendingSyncRecordsCount => _pendingSyncCount;
 
   // ─── Profit Projections ────────────────────────────────────────────────────
 

@@ -22,7 +22,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'printing_records.db');
     return await openDatabase(
       path,
-      version: 9,
+      version: 12,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -44,6 +44,7 @@ class DatabaseHelper {
         balance REAL,
         paymentMode TEXT DEFAULT 'Cash',
         timestamp TEXT,
+        updatedAt TEXT,
         isSynced INTEGER DEFAULT 0,
         createdBy TEXT
       )
@@ -82,6 +83,15 @@ class DatabaseHelper {
         pinHash TEXT,
         isAppLockEnabled INTEGER DEFAULT 0,
         isBiometricEnabled INTEGER DEFAULT 0
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE deleted_record_ids (
+        firestoreId TEXT PRIMARY KEY,
+        deletedAt TEXT NOT NULL,
+        isSynced INTEGER DEFAULT 0,
+        needsVerify INTEGER DEFAULT 0
       )
     ''');
   }
@@ -165,6 +175,31 @@ class DatabaseHelper {
         // Create a unique index to prevent duplicates going forward
         await db.execute(
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_records_firestoreId ON records (firestoreId) WHERE firestoreId IS NOT NULL;");
+      } catch (_) {}
+    }
+    if (oldVersion < 10) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS deleted_record_ids (
+          firestoreId TEXT PRIMARY KEY,
+          deletedAt TEXT NOT NULL,
+          isSynced INTEGER DEFAULT 0,
+          needsVerify INTEGER DEFAULT 0
+        )
+      ''');
+    }
+    if (oldVersion < 11) {
+      try {
+        await db.execute("ALTER TABLE records ADD COLUMN updatedAt TEXT;");
+        // Seed existing rows from their creation timestamp so a legacy record
+        // does not look infinitely stale and get overwritten by any device.
+        await db.execute(
+          "UPDATE records SET updatedAt = timestamp WHERE updatedAt IS NULL;");
+      } catch (_) {}
+    }
+    if (oldVersion < 12) {
+      try {
+        await db.execute(
+            "ALTER TABLE deleted_record_ids ADD COLUMN needsVerify INTEGER DEFAULT 0;");
       } catch (_) {}
     }
   }
@@ -300,5 +335,121 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [id],
     );
+  }
+
+  Future<PrintingRecord?> getRecord(int id) async {
+    final db = await database;
+    final maps = await db.query('records', where: 'id = ?', whereArgs: [id], limit: 1);
+    return maps.isEmpty ? null : PrintingRecord.fromMap(maps.first);
+  }
+
+  Future<int> deleteRecordByFirestoreId(String firestoreId) async {
+    final db = await database;
+    return db.delete('records', where: 'firestoreId = ?', whereArgs: [firestoreId]);
+  }
+
+  Future<PrintingRecord?> getRecordByFirestoreId(String firestoreId) async {
+    final db = await database;
+    final maps = await db.query('records',
+        where: 'firestoreId = ?', whereArgs: [firestoreId], limit: 1);
+    return maps.isEmpty ? null : PrintingRecord.fromMap(maps.first);
+  }
+
+  /// Keeps a local deletion marker until it has reached the cloud.  The marker
+  /// also prevents a stale cloud snapshot from bringing the record back.
+  ///
+  /// [needsVerify] marks a document name that was reconstructed from a legacy
+  /// local id rather than read off the record, so the sync layer confirms it
+  /// exists before writing a tombstone for it.
+  Future<void> markRecordDeleted(String firestoreId,
+      {bool isSynced = false, bool needsVerify = false}) async {
+    final db = await database;
+    await db.insert(
+      'deleted_record_ids',
+      {
+        'firestoreId': firestoreId,
+        'deletedAt': DateTime.now().toUtc().toIso8601String(),
+        'isSynced': isSynced ? 1 : 0,
+        'needsVerify': needsVerify ? 1 : 0,
+      },
+      conflictAlgorithm: ConflictAlgorithm.ignore,
+    );
+    // A deletion received from Firestore confirms any locally queued marker.
+    if (isSynced) {
+      await markDeletedRecordSynced(firestoreId);
+    }
+  }
+
+  Future<bool> isRecordDeleted(String firestoreId) async {
+    final db = await database;
+    final maps = await db.query(
+      'deleted_record_ids',
+      columns: ['firestoreId'],
+      where: 'firestoreId = ?',
+      whereArgs: [firestoreId],
+      limit: 1,
+    );
+    return maps.isNotEmpty;
+  }
+
+  /// Queued deletions waiting to reach the cloud, each with the flag saying
+  /// whether its document name still needs confirming.
+  Future<List<({String firestoreId, bool needsVerify})>>
+      getUnsyncedDeletedRecordIds() async {
+    final db = await database;
+    final maps = await db.query(
+      'deleted_record_ids',
+      columns: ['firestoreId', 'needsVerify'],
+      where: 'isSynced = ?',
+      whereArgs: [0],
+    );
+    return maps
+        .map((row) => (
+              firestoreId: row['firestoreId'] as String,
+              needsVerify: (row['needsVerify'] as int? ?? 0) == 1,
+            ))
+        .toList();
+  }
+
+  Future<void> markDeletedRecordSynced(String firestoreId) async {
+    final db = await database;
+    await db.update(
+      'deleted_record_ids',
+      {'isSynced': 1},
+      where: 'firestoreId = ?',
+      whereArgs: [firestoreId],
+    );
+  }
+
+  /// Deletes tombstones that have reached the cloud and have been sitting
+  /// around longer than [retentionDays].  The window has to outlive the longest
+  /// plausible offline period, otherwise a phone that was offline for a month
+  /// would lose the marker and later resurrect the record from its stale copy.
+  /// Tombstones still waiting to upload are never purged.
+  Future<int> purgeSyncedTombstones({int retentionDays = 90}) async {
+    final db = await database;
+    final cutoff =
+        DateTime.now().toUtc().subtract(Duration(days: retentionDays)).toIso8601String();
+    return db.delete(
+      'deleted_record_ids',
+      where: 'isSynced = ? AND deletedAt < ?',
+      whereArgs: [1, cutoff],
+    );
+  }
+
+  /// Number of local changes still waiting to reach the cloud.  Counts queued
+  /// deletions as well as unsynced records so the UI cannot report "0 pending"
+  /// while a deletion is still sitting in SQLite.
+  Future<int> countPendingSyncs() async {
+    final db = await database;
+    final unsyncedRecords =
+        Sqflite.firstIntValue(await db.rawQuery(
+            'SELECT COUNT(*) FROM records WHERE isSynced = 0')) ??
+        0;
+    final pendingDeletes =
+        Sqflite.firstIntValue(await db.rawQuery(
+            'SELECT COUNT(*) FROM deleted_record_ids WHERE isSynced = 0')) ??
+        0;
+    return unsyncedRecords + pendingDeletes;
   }
 }

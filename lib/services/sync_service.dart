@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
@@ -26,6 +27,156 @@ class SyncService with ChangeNotifier {
 
   // Prevents concurrent realtime-listener inserts from racing with syncFromCloud
   bool _isImporting = false;
+
+  /// Retries queued local changes.  A deletion made while offline would
+  /// otherwise stay in SQLite forever unless the user happened to press a sync
+  /// button, which left the order alive in Firestore indefinitely.
+  Timer? _pendingRetryTimer;
+  static const Duration _retryInterval = Duration(seconds: 30);
+
+  /// Starts the background retry that flushes queued deletions and records.
+  void startPendingSyncRetry() {
+    _pendingRetryTimer?.cancel();
+    _pendingRetryTimer = Timer.periodic(_retryInterval, (_) async {
+      // Nothing queued means there is no reason to keep talking to Firestore.
+      if (await _dbHelper.countPendingSyncs() == 0) return;
+      if (_isSyncing || _isImporting) return;
+      debugPrint('Retrying pending sync...');
+      await syncLocalRecordsToCloud();
+    });
+  }
+
+  void stopPendingSyncRetry() {
+    _pendingRetryTimer?.cancel();
+    _pendingRetryTimer = null;
+  }
+
+  /// Called when the app returns to the foreground.  Anything queued while the
+  /// app was suspended is flushed immediately instead of waiting a full tick.
+  Future<void> flushPendingSync() async {
+    if (await _dbHelper.countPendingSyncs() == 0) return;
+    if (_isSyncing || _isImporting) return;
+    await syncLocalRecordsToCloud();
+  }
+
+  /// An order must have the same ID on every device, including when created
+  /// offline.  Local SQLite ids are only unique on one phone.
+  String createRecordId() {
+    final randomPart = Random.secure().nextInt(0x7fffffff).toRadixString(36);
+    return 'record_${DateTime.now().microsecondsSinceEpoch}_$randomPart';
+  }
+
+  bool _isDeleted(Map<String, dynamic> data) => data['isDeleted'] == true;
+
+  /// Reads the `updatedAt` edit marker out of a Firestore document.  The field
+  /// may be a server Timestamp, an ISO string, or missing entirely on records
+  /// written by older builds, so all three cases are tolerated.
+  DateTime? _cloudUpdatedAt(Map<String, dynamic> data) {
+    final raw = data['updatedAt'];
+    if (raw == null) return null;
+    if (raw is Timestamp) return raw.toDate();
+    try {
+      return DateTime.parse(raw.toString());
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _applyCloudDeletion(String firestoreId) async {
+    await _dbHelper.markRecordDeleted(firestoreId, isSynced: true);
+    await _dbHelper.deleteRecordByFirestoreId(firestoreId);
+  }
+
+  /// Applies one cloud document to local SQLite, inserting it when unknown and
+  /// updating it only when the cloud copy is genuinely newer.  Returns true if
+  /// the local database actually changed.
+  ///
+  /// The guard matters when this device has unsaved edits: a cloud snapshot
+  /// arriving mid-edit must not overwrite them, and the pending edit is what
+  /// will win on the next push.
+  Future<bool> _applyCloudRecord(
+      String firestoreId, Map<String, dynamic> data) async {
+    if (_isDeleted(data)) {
+      await _applyCloudDeletion(firestoreId);
+      return true;
+    }
+    if (await _dbHelper.isRecordDeleted(firestoreId)) return false;
+
+    final rawTimestamp = data['timestamp'];
+    if (rawTimestamp == null) return false;
+
+    try {
+      final recordTime = DateTime.parse(rawTimestamp.toString());
+      final cloudUpdatedAt =
+          _cloudUpdatedAt(data) ?? recordTime;
+
+      final existing =
+          await _dbHelper.getRecordByFirestoreId(firestoreId);
+
+      if (existing != null) {
+        // Local has pending edits that are newer than the cloud copy; keep them.
+        if (!existing.isSynced && existing.updatedAt.isAfter(cloudUpdatedAt)) {
+          debugPrint('Keeping newer local edits for $firestoreId');
+          return false;
+        }
+        if (!cloudUpdatedAt.isAfter(existing.updatedAt)) return false;
+
+        await _dbHelper.updateRecord(
+          PrintingRecord(
+            id: existing.id,
+            firestoreId: firestoreId,
+            customerName: data['customerName'] ?? existing.customerName,
+            jobDescription: data['jobDescription'] ?? existing.jobDescription,
+            quantity: (data['quantity'] as num?)?.toInt() ?? existing.quantity,
+            copies: (data['copies'] as num?)?.toInt() ?? existing.copies,
+            pages: (data['pages'] as num?)?.toInt() ?? existing.pages,
+            pricePerUnit:
+                (data['pricePerUnit'] as num?)?.toDouble() ?? existing.pricePerUnit,
+            totalAmount:
+                (data['totalAmount'] as num?)?.toDouble() ?? existing.totalAmount,
+            paidAmount:
+                (data['paidAmount'] as num?)?.toDouble() ?? existing.paidAmount,
+            balance: (data['balance'] as num?)?.toDouble() ?? existing.balance,
+            paymentMode: data['paymentMode']?.toString() ?? existing.paymentMode,
+            timestamp: recordTime,
+            isSynced: true,
+            createdBy: data['createdBy']?.toString() ?? existing.createdBy,
+            updatedAt: cloudUpdatedAt,
+          ),
+        );
+        debugPrint('Applied cloud update for $firestoreId');
+        return true;
+      }
+
+      final insertedId = await _dbHelper.insertRecord(
+        PrintingRecord(
+          firestoreId: firestoreId,
+          customerName: data['customerName'] ?? 'Walk-in Customer',
+          jobDescription: data['jobDescription'] ?? '',
+          quantity: (data['quantity'] as num?)?.toInt() ?? 1,
+          copies: (data['copies'] as num?)?.toInt() ?? 1,
+          pages: (data['pages'] as num?)?.toInt() ?? 1,
+          pricePerUnit: (data['pricePerUnit'] as num?)?.toDouble() ?? 0.0,
+          totalAmount: (data['totalAmount'] as num?)?.toDouble() ?? 0.0,
+          paidAmount: (data['paidAmount'] as num?)?.toDouble() ?? 0.0,
+          balance: (data['balance'] as num?)?.toDouble() ?? 0.0,
+          paymentMode: data['paymentMode']?.toString() ?? 'Cash',
+          timestamp: recordTime,
+          isSynced: true,
+          createdBy: data['createdBy']?.toString(),
+          updatedAt: cloudUpdatedAt,
+        ),
+      );
+      if (insertedId > 0) {
+        debugPrint('Imported $firestoreId from cloud');
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error applying cloud record $firestoreId: $e');
+      return false;
+    }
+  }
 
   /// Registers a callback to be notified whenever records are automatically synced in
   void registerOnRecordsChanged(VoidCallback callback) {
@@ -59,85 +210,28 @@ class SyncService with ChangeNotifier {
           if (_isImporting) return;
 
           bool anyNewOrUpdated = false;
-          final localRecords = await _dbHelper.getRecords();
-          // Build dedup map keyed by firestoreId (preferred) with timestamp fallback
-          final localFirestoreIds = <String>{};
-          for (final r in localRecords) {
-            if (r.firestoreId != null) localFirestoreIds.add(r.firestoreId!);
-          }
 
           for (final docChange in snapshot.docChanges) {
             final data = docChange.doc.data();
-            if (data == null) continue;
             final docId = docChange.doc.id;
 
-            final rawTimestamp = data['timestamp'];
-            if (rawTimestamp == null) continue;
-            final timestampStr = rawTimestamp.toString();
+            // New versions use a soft-delete marker.  This marker is retained
+            // in Firestore so a phone that was offline cannot upload its old
+            // copy and recreate the order later.
+            if (docChange.type == DocumentChangeType.removed ||
+                data == null ||
+                _isDeleted(data)) {
+              await _applyCloudDeletion(docId);
+              anyNewOrUpdated = true;
+              continue;
+            }
+            if (await _dbHelper.isRecordDeleted(docId)) continue;
 
-            try {
-              final DateTime recordTime = DateTime.parse(timestampStr);
-
-              if (docChange.type == DocumentChangeType.added) {
-                // Skip if we already have this Firestore doc locally
-                if (localFirestoreIds.contains(docId)) continue;
-
-                // New record added on another device -> insert locally
-                final newRecord = PrintingRecord(
-                  firestoreId: docId,
-                  customerName: data['customerName'] ?? 'Walk-in Customer',
-                  jobDescription: data['jobDescription'] ?? '',
-                  quantity: (data['quantity'] as num?)?.toInt() ?? 1,
-                  copies: (data['copies'] as num?)?.toInt() ?? 1,
-                  pages: (data['pages'] as num?)?.toInt() ?? 1,
-                  pricePerUnit: (data['pricePerUnit'] as num?)?.toDouble() ?? 0.0,
-                  totalAmount: (data['totalAmount'] as num?)?.toDouble() ?? 0.0,
-                  paidAmount: (data['paidAmount'] as num?)?.toDouble() ?? 0.0,
-                  balance: (data['balance'] as num?)?.toDouble() ?? 0.0,
-                  paymentMode: data['paymentMode']?.toString() ?? 'Cash',
-                  timestamp: recordTime,
-                  isSynced: true,
-                  createdBy: data['createdBy']?.toString(),
-                );
-                final insertedId = await _dbHelper.insertRecord(newRecord);
-                if (insertedId > 0) {
-                  // -1 means duplicate was silently ignored
-                  localFirestoreIds.add(docId);
-                  anyNewOrUpdated = true;
-                  debugPrint('Real-time auto-sync: Imported $docId for ${newRecord.customerName}');
-                } else {
-                  debugPrint('Real-time auto-sync: Skipped duplicate $docId');
-                }
-              } else if (docChange.type == DocumentChangeType.modified) {
-                // Find the local record with this firestoreId
-                final existingLocal = localRecords
-                    .where((r) => r.firestoreId == docId)
-                    .firstOrNull;
-                if (existingLocal == null) continue;
-
-                final updatedRecord = PrintingRecord(
-                  id: existingLocal.id,
-                  firestoreId: docId,
-                  customerName: data['customerName'] ?? existingLocal.customerName,
-                  jobDescription: data['jobDescription'] ?? existingLocal.jobDescription,
-                  quantity: (data['quantity'] as num?)?.toInt() ?? existingLocal.quantity,
-                  copies: (data['copies'] as num?)?.toInt() ?? existingLocal.copies,
-                  pages: (data['pages'] as num?)?.toInt() ?? existingLocal.pages,
-                  pricePerUnit: (data['pricePerUnit'] as num?)?.toDouble() ?? existingLocal.pricePerUnit,
-                  totalAmount: (data['totalAmount'] as num?)?.toDouble() ?? existingLocal.totalAmount,
-                  paidAmount: (data['paidAmount'] as num?)?.toDouble() ?? existingLocal.paidAmount,
-                  balance: (data['balance'] as num?)?.toDouble() ?? existingLocal.balance,
-                  paymentMode: data['paymentMode']?.toString() ?? existingLocal.paymentMode,
-                  timestamp: recordTime,
-                  isSynced: true,
-                  createdBy: data['createdBy']?.toString() ?? existingLocal.createdBy,
-                );
-                await _dbHelper.updateRecord(updatedRecord);
-                anyNewOrUpdated = true;
-                debugPrint('Real-time auto-sync: Updated $docId');
-              }
-            } catch (e) {
-              debugPrint('Error parsing real-time record change: $e');
+            // The shared applier handles insert-vs-update, tombstone checks and
+            // the updatedAt comparison, so this listener cannot diverge from
+            // the bulk pull path.
+            if (await _applyCloudRecord(docId, data)) {
+              anyNewOrUpdated = true;
             }
           }
 
@@ -150,6 +244,10 @@ class SyncService with ChangeNotifier {
           debugPrint('Real-time sync subscription error: $e');
         },
       );
+
+      // Started here rather than on init so the loop only exists alongside the
+      // real-time listener, and is torn down again by stopRealtimeSync.
+      startPendingSyncRetry();
     } catch (e) {
       debugPrint('Failed to start real-time sync: $e');
     }
@@ -241,6 +339,7 @@ class SyncService with ChangeNotifier {
     _configSubscription = null;
     _payoutSubscription?.cancel();
     _payoutSubscription = null;
+    stopPendingSyncRetry();
     debugPrint('stopRealtimeSync: Stopped real-time Firestore listeners.');
   }
 
@@ -350,42 +449,29 @@ class SyncService with ChangeNotifier {
 
     int syncedCount = 0;
     try {
+      // Deletions go first. This closes the window where an old offline copy
+      // could otherwise be uploaded before the deletion marker reaches cloud.
+      final pendingDeletions = await _dbHelper.getUnsyncedDeletedRecordIds();
+      for (final pending in pendingDeletions) {
+        if (await syncDeletedRecord(pending.firestoreId,
+            onlyIfExists: pending.needsVerify)) {
+          syncedCount++;
+        }
+      }
+
       final records = await _dbHelper.getRecords();
       final unsyncedRecords = records.where((r) => !r.isSynced).toList();
       if (unsyncedRecords.isEmpty) {
-        debugPrint('All records are already synced.');
-        return 0;
+        debugPrint('All records and deletion markers are already synced.');
+        return syncedCount;
       }
 
-      final batch = firestore.batch();
-      // Track docId <-> record mapping so we can write firestoreId back after commit
-      final docIdMap = <String, PrintingRecord>{};
-
-      for (var record in unsyncedRecords) {
-        final docId = record.firestoreId ??
-            'record_${record.id ?? record.timestamp.millisecondsSinceEpoch}';
-        docIdMap[docId] = record;
-        final docRef = firestore.collection('printing_records').doc(docId);
-
-        batch.set(
-          docRef,
-          {
-            ...record.toMap(),
-            'firestoreId': docId,
-            'isSynced': 1,
-            'syncedAt': FieldValue.serverTimestamp(),
-          },
-          SetOptions(merge: true),
-        );
-      }
-
-      await batch.commit();
-
-      // Write firestoreId + synced flag back to local SQLite
-      for (final entry in docIdMap.entries) {
-        await _dbHelper.updateRecord(
-            entry.value.copyWith(isSynced: true, firestoreId: entry.key));
-        syncedCount++;
+      // A transaction checks the delete marker before every upload. Batches
+      // cannot make that conditional check and could resurrect an order.
+      for (final record in unsyncedRecords) {
+        if (await syncSingleRecord(record)) {
+          syncedCount++;
+        }
       }
       debugPrint('Successfully synced $syncedCount records to Firestore!');
     } catch (e) {
@@ -404,19 +490,54 @@ class SyncService with ChangeNotifier {
     if (firestore == null) return false;
 
     try {
-      // Deterministic doc ID: prefer existing firestoreId, otherwise generate
-      // one from the local SQLite id (guaranteed unique per device)
-      final docId = record.firestoreId ??
-          'record_${record.id ?? record.timestamp.millisecondsSinceEpoch}';
-      await firestore.collection('printing_records').doc(docId).set(
-        {
-          ...record.toMap(),
-          'firestoreId': docId, // store in Firestore so syncing devices can read it
-          'isSynced': 1,
-          'syncedAt': FieldValue.serverTimestamp(),
-        },
-        SetOptions(merge: true),
-      );
+      final docId = record.firestoreId ?? createRecordId();
+      if (await _dbHelper.isRecordDeleted(docId)) return false;
+      final docRef = firestore.collection('printing_records').doc(docId);
+
+      // 0 = uploaded, 1 = remote tombstone wins, 2 = remote copy is newer.
+      final outcome = await firestore.runTransaction<int>((transaction) async {
+        final current = await transaction.get(docRef);
+        if (current.exists && _isDeleted(current.data()!)) return 1;
+
+        // An offline phone can hold a copy that another device has since
+        // edited.  Uploading it blind would silently revert that edit, so the
+        // newer cloud version is pulled instead.
+        final cloudUpdatedAt = _cloudUpdatedAt(current.data() ?? const {});
+        if (current.exists &&
+            cloudUpdatedAt != null &&
+            cloudUpdatedAt.isAfter(record.updatedAt)) {
+          return 2;
+        }
+
+        transaction.set(
+          docRef,
+          {
+            ...record.toMap(),
+            'firestoreId': docId,
+            'isDeleted': false,
+            'isSynced': 1,
+            'syncedAt': FieldValue.serverTimestamp(),
+          },
+          SetOptions(merge: true),
+        );
+        return 0;
+      });
+
+      if (outcome == 1) {
+        await _applyCloudDeletion(docId);
+        debugPrint('Skipped stale upload for deleted record: $docId');
+        return false;
+      }
+      if (outcome == 2) {
+        debugPrint('Skipped upload: cloud copy of $docId is newer than local.');
+        // Pull the winner down so this device stops disagreeing with the cloud.
+        final fresh = await docRef.get();
+        if (fresh.exists && !_isDeleted(fresh.data()!)) {
+          await _applyCloudRecord(docId, fresh.data()!);
+        }
+        return false;
+      }
+
       if (record.id != null) {
         // Write the firestoreId back to local SQLite so dedup works from now on
         await _dbHelper.updateRecord(
@@ -426,6 +547,47 @@ class SyncService with ChangeNotifier {
       return true;
     } catch (e) {
       debugPrint('Error syncing single record to Firestore: $e');
+      return false;
+    }
+  }
+
+  /// Publishes a deletion marker. It is deliberately not a Firestore hard
+  /// delete: the marker is what makes deletion win over delayed offline writes.
+  ///
+  /// [onlyIfExists] is set when the document name had to be reconstructed rather
+  /// than read from the record, so no junk tombstone is created for a document
+  /// that was never there.
+  Future<bool> syncDeletedRecord(String firestoreId,
+      {bool onlyIfExists = false}) async {
+    final firestore = _getFirestoreInstance();
+    if (firestore == null) return false;
+    try {
+      final docRef = firestore.collection('printing_records').doc(firestoreId);
+
+      if (onlyIfExists) {
+        final existing = await docRef.get();
+        if (!existing.exists) {
+          // The guessed name was wrong, so there is no cloud copy to remove.
+          await _dbHelper.markDeletedRecordSynced(firestoreId);
+          debugPrint('No cloud record at $firestoreId; nothing to delete.');
+          return true;
+        }
+      }
+
+      await firestore.runTransaction<void>((transaction) async {
+        await transaction.get(docRef);
+        transaction.set(docRef, {
+          'firestoreId': firestoreId,
+          'isDeleted': true,
+          'deletedAt': FieldValue.serverTimestamp(),
+          'isSynced': 1,
+        }, SetOptions(merge: true));
+      });
+      await _dbHelper.markDeletedRecordSynced(firestoreId);
+      debugPrint('Deletion synced to Firestore: $firestoreId');
+      return true;
+    } catch (e) {
+      debugPrint('Error syncing record deletion: $e');
       return false;
     }
   }
@@ -447,14 +609,7 @@ class SyncService with ChangeNotifier {
 
     int importedCount = 0;
     try {
-      // 1. Load existing local firestoreIds for O(1) dedup lookups
-      final localRecords = await _dbHelper.getRecords();
-      final localFirestoreIds = <String>{};
-      for (final r in localRecords) {
-        if (r.firestoreId != null) localFirestoreIds.add(r.firestoreId!);
-      }
-
-      // 2. Fetch all records from Firestore
+      // 1. Fetch all records from Firestore
       final snapshot = await firestore.collection('printing_records').get();
       debugPrint('syncFromCloud: found ${snapshot.docs.length} records on Firestore.');
 
@@ -462,40 +617,18 @@ class SyncService with ChangeNotifier {
         final data = doc.data();
         final docId = doc.id;
         try {
-          // Skip if we already have this Firestore doc locally
-          if (localFirestoreIds.contains(docId)) continue;
-
-          final rawTimestamp = data['timestamp'];
-          if (rawTimestamp == null) continue;
-          final timestampStr = rawTimestamp.toString();
-
-          // Build the local record (isSynced=true since it came from cloud)
-          final record = PrintingRecord(
-            firestoreId: docId,
-            customerName: data['customerName'] ?? 'Walk-in Customer',
-            jobDescription: data['jobDescription'] ?? '',
-            quantity: (data['quantity'] as num?)?.toInt() ?? 1,
-            copies: (data['copies'] as num?)?.toInt() ?? 1,
-            pages: (data['pages'] as num?)?.toInt() ?? 1,
-            pricePerUnit: (data['pricePerUnit'] as num?)?.toDouble() ?? 0.0,
-            totalAmount: (data['totalAmount'] as num?)?.toDouble() ?? 0.0,
-            paidAmount: (data['paidAmount'] as num?)?.toDouble() ?? 0.0,
-            balance: (data['balance'] as num?)?.toDouble() ?? 0.0,
-            paymentMode: data['paymentMode']?.toString() ?? 'Cash',
-            timestamp: DateTime.parse(timestampStr),
-            isSynced: true,
-            createdBy: data['createdBy']?.toString(),
-          );
-
-          final insertedId = await _dbHelper.insertRecord(record);
-          if (insertedId > 0) {
-            localFirestoreIds.add(docId);
-            importedCount++;
-          }
+          // Same applier as the realtime listener, so a bulk pull and a live
+          // update can never resolve a conflict differently.
+          if (await _applyCloudRecord(docId, data)) importedCount++;
         } catch (e) {
           debugPrint('syncFromCloud: error importing doc $docId: $e');
         }
       }
+
+      // Old tombstones that are already safely on the cloud are only needed to
+      // outlive the longest offline window, so they can be pruned here.
+      final purged = await _dbHelper.purgeSyncedTombstones();
+      if (purged > 0) debugPrint('Purged $purged old tombstone(s).');
 
       debugPrint('syncFromCloud: imported $importedCount new records from Firestore.');
     } catch (e) {

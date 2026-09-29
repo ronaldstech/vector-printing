@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -5,6 +7,7 @@ import 'providers/record_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/security_provider.dart';
 import 'services/auth_service.dart';
+import 'services/sync_service.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/main_navigation_screen.dart';
 import 'screens/security/app_lock_screen.dart';
@@ -56,6 +59,9 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
       security.handleAppPaused();
     } else if (state == AppLifecycleState.resumed) {
       security.handleAppResumed();
+      // Anything queued while the app was suspended is flushed straight away
+      // instead of waiting for the next retry tick.
+      unawaited(SyncService().flushPendingSync());
     }
   }
 

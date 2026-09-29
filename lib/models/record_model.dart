@@ -16,6 +16,11 @@ class PrintingRecord {
   final DateTime timestamp;
   final bool isSynced;
   final String? createdBy;
+  /// Client-written UTC edit time. Compared against the cloud copy so an
+  /// offline device cannot silently overwrite a newer edit made elsewhere.
+  /// This is deliberately not the Firestore `syncedAt` server timestamp,
+  /// because that value is not readable from the local SQLite side.
+  final DateTime updatedAt;
 
   PrintingRecord({
     this.id,
@@ -33,7 +38,8 @@ class PrintingRecord {
     required this.timestamp,
     this.isSynced = false,
     this.createdBy,
-  });
+    DateTime? updatedAt,
+  }) : updatedAt = updatedAt ?? timestamp;
 
   Map<String, dynamic> toMap() {
     return {
@@ -50,6 +56,7 @@ class PrintingRecord {
       'balance': balance,
       'paymentMode': paymentMode,
       'timestamp': timestamp.toIso8601String(),
+      'updatedAt': updatedAt.toUtc().toIso8601String(),
       'isSynced': isSynced ? 1 : 0,
       'createdBy': createdBy,
     };
@@ -72,6 +79,11 @@ class PrintingRecord {
       timestamp: DateTime.parse(map['timestamp']),
       isSynced: (map['isSynced'] is int ? map['isSynced'] == 1 : map['isSynced'] == true),
       createdBy: map['createdBy'],
+      // Legacy rows have no updatedAt; fall back to the creation timestamp so
+      // they sort sensibly instead of defaulting to the epoch.
+      updatedAt: map['updatedAt'] != null
+          ? DateTime.parse(map['updatedAt'])
+          : DateTime.parse(map['timestamp']),
     );
   }
 
@@ -91,6 +103,7 @@ class PrintingRecord {
     DateTime? timestamp,
     bool? isSynced,
     String? createdBy,
+    DateTime? updatedAt,
   }) {
     return PrintingRecord(
       id: id ?? this.id,
@@ -108,6 +121,7 @@ class PrintingRecord {
       timestamp: timestamp ?? this.timestamp,
       isSynced: isSynced ?? this.isSynced,
       createdBy: createdBy ?? this.createdBy,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }
